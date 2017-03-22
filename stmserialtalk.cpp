@@ -5,13 +5,16 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <termios.h>
+#include "appUpdater.h"
 #ifndef Q_MOC_RUN
 #include "../boost_1_58_0/boost_include.h"
 #endif
 
 //stmSerialTalk::stmSerialTalk(QWidget *parent) : QWidget(parent)
-stmSerialTalk::stmSerialTalk()
+stmSerialTalk::stmSerialTalk() : stmUpdater(new stmUpdaterThread(&stmfd))
 {
+    //初始化解析数据函数指针指向应用态处理函数
+    m_pReadDataFunc = &stmSerialTalk::readData;
     qDebug("kira --- Initial stm32 talk");
     stmSerialData.devName = "ttySP2";
     stmSerialData.baudRate = "B115200";//"B57600";
@@ -22,6 +25,11 @@ stmSerialTalk::stmSerialTalk()
     m_stopFlag = false;
     memset(stmbuf, 0, sizeof(stmbuf));
     this->openSerial();
+
+    //初始化单片机升级定时器
+    stmUpdateTimer.setInterval(MAX_STM_UPDATE_TIME);
+    connect(&stmUpdateTimer, SIGNAL(timeout()), this, SLOT(stmUpdateFail()));
+    connect(stmUpdater, SIGNAL(stmUpdateFail()), this, SLOT(stmUpdateFail()));
 }
 
 bool stmSerialTalk::openSerial()
@@ -157,6 +165,22 @@ void stmSerialTalk::readData()
                     printf("\n");
                     emit recvPscamAck(stmbuf[6]);
                     break;
+                case 0x21:  //单片机升级重启回应指令
+                    if(!stmUpdater)
+                    {
+                        //升级线程不正确
+                        qDebug("Stm updater is incorrect, update failed!!");
+                    }
+                    else
+                    {
+                        //解析函数切换到boot态
+                        m_pReadDataFunc = &stmSerialTalk::readDataBoot;
+                        //启动升级线程
+                        stmUpdater->start();
+                        //启动定时器
+                        stmUpdateTimer.start();
+                    }
+                    break;
             }
         }
     }
@@ -218,7 +242,10 @@ void stmSerialTalk::run()
             msleep(20);
             if(FD_ISSET(stmfd, &sets))
             {
-                readData();
+                //readData();
+                //调用指向解析函数的函数指针
+                //有两种情况 1.指向应用态解析函数 2.指向boot态解析函数
+                (this->*m_pReadDataFunc)();
             }
         }
 
@@ -648,3 +675,121 @@ unsigned char stmSerialTalk::HexToAsc(unsigned char aHex)
         ASCII_Data = ASCII_Data + 0x37;         //‘A--F’
     return ASCII_Data;
 }
+
+//stm boot接收处理函数
+void stmSerialTalk::readDataBoot()
+{
+    const int BOOT_DATALEN = 12;        //boot数据长度固定是12字节
+    char *pBuf = stmbuf;
+    int nReadLen = read(stmfd, pBuf, BOOT_DATALEN);
+    pBuf += nReadLen;                   //数据指针偏移
+    //处理粘包
+    int nRemainingBytes = BOOT_DATALEN - nReadLen;
+    if(nRemainingBytes < 0 || nReadLen == -1)
+    {
+        qDebug("Bad boot datalen: %d, drop this data...\n", nReadLen);
+        memset(stmbuf, 0, BOOT_DATALEN);
+        return;
+    }
+    else if(nRemainingBytes > 0)
+    {
+        while(nRemainingBytes > 0)
+        {
+            //等待5毫秒
+            usleep(1000*5);
+            nReadLen = read(stmfd, pBuf, nRemainingBytes);
+            pBuf += nReadLen;
+            nRemainingBytes -= nReadLen;
+            if(nRemainingBytes < 0 || nReadLen == -1)
+            {
+                qDebug("Bad boot datalen: %d, drop this data...\n", nReadLen);
+                memset(stmbuf, 0, BOOT_DATALEN);
+                return;
+            }
+        }
+    }
+    //处理后的数据为一整包数据
+    //打印收到的数据
+    int i = 0;  //循环变量
+    printf("Receive stm boot comdata:");
+    for(i = 0; i != BOOT_DATALEN; i++)
+    {
+        printf(" %02X", stmbuf[i]);
+    }
+    printf("\n");
+
+    //检查固定数据位是否合法
+    if ((stmbuf[0]!=0x00) || (stmbuf[1]!=0x00) || (stmbuf[2]!=0xBB) || (stmbuf[5]!=0xCC) || (stmbuf[6]!=0xAA))
+    {
+        qDebug("Fix data check error, drop data...\n");
+        return;
+    }
+
+    //检查校验位
+    char verify = 0;
+    for(i = 0; i != 3; i++)
+    {
+        verify ^= stmbuf[7 + i];
+    }
+    if(verify != stmbuf[10])
+    {
+        qDebug("Verify check error, drop data...\n");
+        return;
+    }
+
+    //处理数据
+    switch(stmbuf[3])
+    {
+    //升级完成
+    case 0x16:
+        qDebug("stm restart successful, stmApp update success.\n");
+        stmUpdater->m_updateStm_update_ok = true;
+        m_pReadDataFunc = &stmSerialTalk::readData;
+        //停止定时器
+        stmUpdateTimer.stop();
+        //停止升级线程
+        stmUpdater->exit();
+        break;
+    //删除应用程序完成
+    case 0x17:
+        qDebug("StmApp delete OK.\n");
+        stmUpdater->m_updateStm_deleteOK = true;
+        break;
+    //发送数据接收回应
+    case 0x18:
+        qDebug("StmApp send data reply.\n");
+    {
+        if(stmbuf[9] == 0)
+        {
+            //回应接收成功
+            stmUpdater->stmUpdateCond.wakeAll();    //唤醒等待升级线程
+            stmUpdater->stmUpdateMutex.lock();
+            ++stmUpdater->m_updateStm_updateAnswer;
+            stmUpdater->stmUpdateMutex.unlock();
+        }
+        else
+        {
+            qDebug("StmApp 0x18 return code error: %d", stmbuf[9]);
+        }
+    }
+        break;
+    //进入boot成功
+    case 0x19:
+        qDebug("StmApp into boot ok.\n");
+        stmUpdater->m_updateStm_intoBootOK = true;
+        break;
+    default:
+        qDebug("Unknown command: %d\n", stmbuf[3]);
+        break;
+    }
+}
+
+void stmSerialTalk::stmUpdateFail()
+{
+    //单片机升级失败处理
+    qDebug("stmUpdateFail signal catched, update failed.");
+    stmUpdateTimer.stop();
+    stmUpdater->exit(0);            //强行结束升级线程
+    m_pReadDataFunc = &stmSerialTalk::readData;    //处理数据指针重新指向应用态
+}
+

@@ -15,11 +15,15 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <QThread>
+#include <QTimer>
 #include "datastructure.h"
 
 const char head_f = 0x55;
 const char head_s = 0x7a;
 const int headlen = 6;
+const int MAX_STM_UPDATE_TIME = 1000 * 60 * 5;  //最长单片机升级时间
+
+class stmUpdaterThread;
 
 //class stmSerialTalk : public QWidget
 class stmSerialTalk : public QThread
@@ -101,6 +105,21 @@ public:
 private:
     bool m_stopFlag;
     QMutex threadMutex;
+
+//单片机升级功能部分
+public:
+    stmUpdaterThread *stmUpdater;   //stm程序升级线程
+
+private:
+    void readDataBoot();    //Boot态串口数据解析函数
+    QTimer stmUpdateTimer;  //stm程序升级定时器用于超时定时
+
+    //声明处理数据函数指针
+    typedef void (stmSerialTalk::*readDataFunc)(void);
+    readDataFunc m_pReadDataFunc;
+
+private slots:
+    void stmUpdateFail();       //升级失败处理
 };
 
 #endif // STMSERIALTALK_H
