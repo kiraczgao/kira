@@ -1,0 +1,19 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/tickets.jpg</file>
+        <file>images/trade.jpg</file>
+        <file>images/tradeInfo.jpg</file>
+        <file>images/backglass.png</file>
+        <file>images/background.png</file>
+        <file>images/tickets_money.png</file>
+        <file>images/trade_money.png</file>
+        <file>images/signal.png</file>
+        <file>images/blackClear.png</file>
+        <file>images/check.png</file>
+        <file>images/uncheck.png</file>
+        <file>images/quick.png</file>
+        <file>images/bk.jpg</file>
+        <file>images/bd2.jpg</file>
+        <file>images/pay.png</file>
+    </qresource>
+</RCC>
