@@ -2,12 +2,15 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <sys/reboot.h>
+#include <netinet/in.h>
 #include <QFile>
 #include <QByteArray>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QTimer>
 #include <QEventLoop>
+#include <QMutexLocker>
+#include "stmserialtalk.h"
 #include "appUpdater.h"
 #include "crc32.h"
 
@@ -59,8 +62,18 @@ ftpClient::~ftpClient()
     }
 }
 
-//FTP上传文件-重载1
-//data 需要上传的数据
+/** @function
+********************************************************************************
+<PRE>
+函数名: put
+功能:  上传功能函数-重载1
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: ftpClient类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
 bool ftpClient::put(const QUrl &url, const QByteArray &data)
 {
     //有效性判断
@@ -83,7 +96,18 @@ bool ftpClient::put(const QUrl &url, const QByteArray &data)
     return true;
 }
 
-//FTP上传文件-重载2
+/** @function
+********************************************************************************
+<PRE>
+函数名: put
+功能:  上传功能函数-重载2
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: ftpClient类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
 bool ftpClient::put(const QUrl &url, QFile *pFile)
 {
     //有效性判断
@@ -123,7 +147,18 @@ bool ftpClient::put(const QUrl &url, QFile *pFile)
     return true;
 }
 
-//FTP下载文件
+/** @function
+********************************************************************************
+<PRE>
+函数名: get
+功能:  下载FTP文件功能函数
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: ftpClient类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
 bool ftpClient::get(const QUrl &url, QFile *pFile)
 {
     //有效性判断
@@ -171,8 +206,18 @@ bool ftpClient::get(const QUrl &url, QFile *pFile)
     return true;
 }
 
-//槽定义
-//FTP文件下载完成
+/** @function
+********************************************************************************
+<PRE>
+函数名: dealFinish
+功能:  处理FTP操作结束工作
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: ftpClient类槽函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
 void ftpClient::dealFinish(QNetworkReply *pReply)
 {
     //停止定时器
@@ -232,13 +277,24 @@ void ftpClient::dealFinish(QNetworkReply *pReply)
     return;
 }
 
-//上传进度条
+/** @function
+********************************************************************************
+<PRE>
+函数名: dealuploadProgress
+功能:  处理上传进度
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: ftpClient类槽函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
 void ftpClient::dealuploadProgress(qint64 bytesSent, qint64 bytesTotal)
 {
     quint8 nPercent = (quint8)(bytesSent/(double)bytesTotal * 100); //计算百分比
     if(bytesSent != 0)
     {
-        printf("Uploading...progress: %d%%\n", nPercent);
+        printf("Uploading...progress: %d%%...\n", nPercent);
         if(bytesSent == bytesTotal && m_pReply->error() == QNetworkReply::NoError)
         {
             //获取文件名
@@ -249,7 +305,18 @@ void ftpClient::dealuploadProgress(qint64 bytesSent, qint64 bytesTotal)
     }
 }
 
-//下载进度条
+/** @function
+********************************************************************************
+<PRE>
+函数名: dealdownloadProcess
+功能:  处理下载进度
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: ftpClient类槽函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
 void ftpClient::dealdownloadProcess(qint64 bytesReceived, qint64 bytesTotal)
 {
     quint8 nPercent = (quint8)(bytesReceived/(double)bytesTotal * 100); //计算百分比
@@ -267,7 +334,18 @@ void ftpClient::dealdownloadProcess(qint64 bytesReceived, qint64 bytesTotal)
     }
 }
 
-//超时处理
+/** @function
+********************************************************************************
+<PRE>
+函数名: dealtimeOut
+功能:  处理超时功能函数
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: ftpClient类槽函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
 void ftpClient::dealtimeOut()
 {
     printf("FTP operation time out,the operation will be canceled.\n");
@@ -280,7 +358,18 @@ void ftpClient::dealtimeOut()
     m_pReply->abort();
 }
 
-//出错处理
+/** @function
+********************************************************************************
+<PRE>
+函数名: dealError
+功能:  ftp错误处理函数
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: ftpClient类槽函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
 void ftpClient::dealError(QNetworkReply::NetworkError code)
 {
     //停止定时器
@@ -299,15 +388,20 @@ void ftpClient::dealError(QNetworkReply::NetworkError code)
 }
 
 
-/*********************
- *     appUpdater    *
- *********************/
+/***************************************************************
+ *                          appUpdater                         *
+ ***************************************************************/
+
+//宏定义
+#define MAIN_UPDATE_TYPE 1           //主程序升级类型
+#define CARDREADER_UPDATE_TYPE 2     //读卡器程序升级类型
+
+//静态成员初始化
 const QString appUpdater::UPDATE_DIR = "/opt/kira/updata/";
 const QString appUpdater::MAIN_FILE = "scanPos-Alipay";
-const QString appUpdater::CARDREADER_FILE = "cardReader";
+const QString appUpdater::CARDREADER_FILE = "cardreader.bin";
 const QString appUpdater::UPDATE_SUCCESS_FILE = UPDATE_DIR + "newUpdate.notify";
 
-//软件升级执行外部函数
 appUpdater::appUpdater() : m_bResult(false)
 {
     m_pFtpClient = new ftpClient();
@@ -330,13 +424,36 @@ appUpdater::~appUpdater()
     }
 }
 
-enum appUpdaterError appUpdater::processUpdate(const posFtpInfo_t& ftpInfo)
+/** @function
+********************************************************************************
+<PRE>
+函数名: processUpdate
+功能:  执行升级操作外部接口
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: appUpdater类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
+enum appUpdaterError appUpdater::processUpdate(const posFtpInfo_t& ftpInfo, stmSerialTalk *pstmSerialTalk)
 {
-    return __processUpdate(ftpInfo);
+    return __processUpdate(ftpInfo, pstmSerialTalk);
 }
 
-//软件升级执行内部函数
-enum appUpdaterError appUpdater::__processUpdate(const posFtpInfo_t& ftpInfo)
+/** @function
+********************************************************************************
+<PRE>
+函数名: __processUpdate
+功能:  执行升级操作内部接口
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: appUpdater类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
+enum appUpdaterError appUpdater::__processUpdate(const posFtpInfo_t& ftpInfo, stmSerialTalk *pstmSerialTalk)
 {
     //检查参数正确性
     enum appUpdaterError ret = __checkFtpInfo(ftpInfo);
@@ -345,6 +462,7 @@ enum appUpdaterError appUpdater::__processUpdate(const posFtpInfo_t& ftpInfo)
         return ret;
     }
 
+    qint8 nUpdateType = 0;   //升级类型
     //设置URL
     QUrl url;
     url.setScheme("ftp");
@@ -368,6 +486,7 @@ enum appUpdaterError appUpdater::__processUpdate(const posFtpInfo_t& ftpInfo)
 
         }
         strFtpFile += MAIN_FILE;
+        nUpdateType = MAIN_UPDATE_TYPE;
     }
     else if(ftpInfo.version.toLower()[0] == QChar('s'))
     {
@@ -380,6 +499,7 @@ enum appUpdaterError appUpdater::__processUpdate(const posFtpInfo_t& ftpInfo)
 
         }
         strFtpFile += CARDREADER_FILE;
+        nUpdateType = CARDREADER_UPDATE_TYPE;
     }
     else
     {
@@ -424,10 +544,23 @@ enum appUpdaterError appUpdater::__processUpdate(const posFtpInfo_t& ftpInfo)
     {
         if(__checkDownFileCRC(&file, ftpInfo.crc))
         {
-            printf("[system update]Update file: %s download success! rebooting system...\n", strlocalFile.toLatin1().constData());
+            printf("[system update]Update file: %s download success!\n", strlocalFile.toLatin1().constData());
             ret = noError;
-            //重新启动
-            __rebootSystem();
+            //判断升级类型
+            if(nUpdateType == MAIN_UPDATE_TYPE)
+            {
+                //工控机升级
+                __processMainUpdate();
+            }
+            else if(nUpdateType == CARDREADER_UPDATE_TYPE)
+            {
+                //读卡器升级
+                __processCardReaderUpdate(pstmSerialTalk);
+            }
+            else
+            {
+                ret = filetypeError;
+            }
         }
         else
         {
@@ -452,7 +585,18 @@ enum appUpdaterError appUpdater::__processUpdate(const posFtpInfo_t& ftpInfo)
     return ret;
 }
 
-//校验FTP信息是否正确
+/** @function
+********************************************************************************
+<PRE>
+函数名: __checkFtpInfo
+功能:  检查FTP信息正确性
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: appUpdater类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
 enum appUpdaterError appUpdater::__checkFtpInfo(const posFtpInfo_t &ftpInfo)
 {
     //检查ftp参数正确性
@@ -489,7 +633,18 @@ enum appUpdaterError appUpdater::__checkFtpInfo(const posFtpInfo_t &ftpInfo)
     return noError;
 }
 
-//校验下载文件CRC是否正确
+/** @function
+********************************************************************************
+<PRE>
+函数名: __checkDownFileCRC
+功能:  CRC32校验
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: appUpdater类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
 bool appUpdater::__checkDownFileCRC(QFile *file, const QString &strCRC)
 {
     //这里校验下载文件的CRC与服务器提供的CRC值是否匹配
@@ -516,7 +671,18 @@ bool appUpdater::__checkDownFileCRC(QFile *file, const QString &strCRC)
     return true;
 }
 
-//删除文件
+/** @function
+********************************************************************************
+<PRE>
+函数名: __deleteFile
+功能:  删除对应QFile打开的磁盘文件
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: appUpdater类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
 void appUpdater::__deleteFile(QFile *file)
 {
     //关闭文件
@@ -531,8 +697,21 @@ void appUpdater::__deleteFile(QFile *file)
     }
 }
 
-void appUpdater::__rebootSystem()
+/** @function
+********************************************************************************
+<PRE>
+函数名: __processMainUpdate
+功能:  处理主程序升级函数
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: appUpdater类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
+void appUpdater::__processMainUpdate()
 {
+    printf("update main application, rebooting system now...\n");
     //创建升级成功标志文件
     QFile file(UPDATE_SUCCESS_FILE);
     file.open(QIODevice::WriteOnly);
@@ -543,9 +722,426 @@ void appUpdater::__rebootSystem()
     ::reboot(RB_AUTOBOOT);
 }
 
-//FTP完成响应函数
+/** @function
+********************************************************************************
+<PRE>
+函数名: __processCardReaderUpdate
+功能:  处理读卡器单片机程序升级函数
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: appUpdater类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
+void appUpdater::__processCardReaderUpdate(stmSerialTalk *pstmSerialTalk)
+{
+    printf("update cardreader, start stmUpdater thread...\n");
+    if(!pstmSerialTalk->stmUpdater)
+    {
+        printf("stmUpdater not found, update failed!");
+    }
+    else
+    {
+        //发送重启指令
+        char resetCommand[8] = { 0 };
+        //读卡器准备下载指令 1:发送读卡器复位指令,延时1s,无返回值
+        //命令实例：55 7A 21 01 00 00 00 0F
+        resetCommand[0] = 0x55;
+        resetCommand[1] = 0x7A; //HEAD
+        resetCommand[2] = 0x21; //COMMAND
+        resetCommand[3] = 0x01; //LEN
+        resetCommand[7] = 0x0F; //VERIFY
+        for(int i=0;i<5;i++)
+        {
+            pstmSerialTalk->writeData(resetCommand, 8);     //发送重启指令
+            usleep(500*1000);
+            if(pstmSerialTalk->stmUpdater->m_updateStm_restartOK)
+            {
+                break;
+            }
+        }
+    }
+}
+
+/** @function
+********************************************************************************
+<PRE>
+函数名: dealFtpOperateComplete
+功能:  处理ftp操作完成动作，发送结束循环信号
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: appUpdater类槽函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
 void appUpdater::dealFtpOperateComplete(bool result)
 {
     m_bResult = result;
     emit quitloop();    //终止局部事件循环信号
+}
+
+
+/***************************************************************
+ *                        stmUpdaterThread                     *
+ ***************************************************************/
+//相关宏定义
+#define MAX_RETRY_TIMES 5     //升级失败最大重试次数
+
+stmUpdaterThread::stmUpdaterThread(int *fd) :
+    stmfd(fd)
+{
+    //复位标志
+    m_updateStm_restartOK = false;
+    m_updateStm_deleteOK = false;
+    m_updateStm_intoBootOK = false;
+    m_updateStm_update_ok = false;
+    m_updateStm_transferReady = true;
+}
+
+stmUpdaterThread::~stmUpdaterThread()
+{
+
+}
+
+/** @function
+********************************************************************************
+<PRE>
+函数名: run
+功能:  线程函数
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: stmUpdaterThread类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
+void stmUpdaterThread::run()
+{
+    qDebug("Begin update stmApp...");
+    int nFlag = 0;          //升级状态标志
+    int nRetryTimes = 0;    //重试次数
+    m_updateStmStatus = 0;  //复位状态机
+    m_updateStm_restartOK = false; //复位标志
+    m_updateStm_deleteOK = false;
+    m_updateStm_intoBootOK = false;
+    m_updateStm_update_ok = false;
+    m_updateStm_transferReady = true;
+
+    //检测文件是否存在
+    QString strBinFile = appUpdater::UPDATE_DIR + appUpdater::CARDREADER_FILE;
+    QFile file(strBinFile);
+    if(!file.exists())
+    {
+        qDebug("update file doesn't exists!\n");
+        emit stmUpdateFail();
+        return;
+    }
+
+    while(nFlag <= 0 && nRetryTimes < MAX_RETRY_TIMES)
+    {
+        //如果升级状态返回为0则一直执行，直至升级完成
+        nFlag = updateStmApp(&nRetryTimes);
+        if(nFlag < 0)
+        {
+            qDebug("updateStmApp failed, return code: %d, retry!", nFlag);
+            ++nRetryTimes;
+        }
+    }
+    //判断成功或者失败次数
+    if(nFlag > 0)
+    {
+       qDebug("Update stmApp finished,wait stm restart...");
+    }
+    else
+    {
+        if(nRetryTimes >= MAX_RETRY_TIMES)
+        {
+            qDebug("Update stmApp failed %d times.", nRetryTimes);
+            qDebug("Failed excueed max retry times! Give up update!");
+        }
+        emit stmUpdateFail();
+    }
+}
+
+/** @function
+********************************************************************************
+<PRE>
+函数名: updateStmApp
+功能:  单片机程序升级函数
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: stmUpdaterThread类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
+int stmUpdaterThread::updateStmApp(int &nRetryTimes)
+{
+    qDebug("stm_update_state:%d;",m_updateStmStatus);
+
+        int i;
+        switch(m_updateStmStatus)
+        {
+            case 0:
+                sleep(1);
+                ++nRetryTimes;    //增加重试次数
+                m_updateStm_intoBootOK = false;
+                for(i=0;i<10;i++)
+                {
+                    //2:发送检测读卡器是否进入BOOT状态指令延时100ms
+                    //send:00 00 aa 02 19 1b cc
+                    //answer:00 00 bb 19 00 cc aa 03 19 00 1a cc
+                    sendStmBoot(0x19);
+                    usleep(200*1000);
+                    if(m_updateStm_intoBootOK)
+                    {
+                        break;
+                    }
+                }
+                if(!m_updateStm_intoBootOK)
+                {
+                    return -19;
+                }
+                //进入下一个指令,发送删除程序指令
+                m_updateStmStatus=1;
+                break;
+            case 1:
+                sleep(2);
+                m_updateStm_deleteOK = false;
+                for(i=0;i<10;i++)
+                {
+                    //3:发送删除读卡器应用程序指令延时
+                    // 4in1一分钟收不到这条指令则会放弃升级
+                    sendStmBoot(0x17);
+                    usleep(500*1000);
+                    if(m_updateStm_deleteOK)
+                    {
+                        break;
+                    }
+                }
+                if(!m_updateStm_deleteOK)
+                {
+                    return -17;
+                }
+                //进入下一个指令,发送程序数据
+                m_updateStmStatus=2;
+                break;
+            case 2:
+                //4:发送程序文件18指令等待时间
+                i = sendStmBinData();
+                if( i < 0)
+                {
+                    return -18;
+                }
+                else if(i == 0)
+                {
+                    m_updateStmStatus = 0;
+                    break;
+                }
+                else
+                {
+                    m_updateStmStatus = 3;
+                    qDebug("StmUpdate: binary BIN file transfered successfully!\n");
+                }
+                break;
+            case 3:
+                m_updateStm_update_ok = false;
+                for(i=0;i<3;i++)
+                {
+                    // 5:读卡器完成下载应答16指令等待时间
+                    //命令：		00 00 AA 02 16 18 CC
+                    //正确返回：	00 00 bb 16 00 cc aa 03 16 00 15 cc
+                    sendStmBoot(0x16);
+                    sleep(1);
+                    if(m_updateStm_update_ok)
+                    {
+                        break;
+                    }
+                }
+                if(!m_updateStm_update_ok)
+                {
+                    return -16;
+                }
+                return 1;//成功
+                break;
+        }
+        return 0;
+}
+
+/** @function
+********************************************************************************
+<PRE>
+函数名: sendStmBinData
+功能:  发送单片机升级程序文件
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: stmUpdaterThread类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
+int stmUpdaterThread::sendStmBinData()
+{
+    quint8 packet[137] = { 0 };    //发送包缓冲区
+    int ret_flag = -1, nSendCount = 0;  //返回值,发送计数
+    volatile int nReadByte = 0;  //文件读取块数
+    quint16 nPackOrder = 0;      //包序号
+
+    //写包头包尾固定部分
+    packet[0] = 0x00;
+    packet[1] = 0x00;
+    packet[2] = 0xAA;
+    packet[3] = 0x84;
+    packet[4] = 0x18;
+    packet[136] = 0xCC;
+
+    QString strBinFile = appUpdater::UPDATE_DIR + appUpdater::CARDREADER_FILE;
+    QFile file(strBinFile);
+    if(!file.open(QIODevice::ReadOnly))
+    {
+        qDebug("open Stm update file error!\n");
+        return ret_flag;
+    }
+
+    //复位应答
+    stmUpdateMutex.lock();
+    m_updateStm_updateAnswer = 0;
+    stmUpdateMutex.unlock();
+
+    qDebug("Start transfer stm bin file, total size: %lld", file.size());
+    nReadByte = file.read((char*)&packet[7], 128);   //每次读取128个字节到发送包缓冲区
+    while(nReadByte > 0)
+    {
+        ++nSendCount;
+        //将包序号转换成网络字节序
+        quint16 netPackOrder = htons(nPackOrder);
+        //写入包的序号序号
+        memcpy(&packet[5], &netPackOrder, 2);
+        //包序号加1
+        ++nPackOrder;
+        //计算校验
+        quint8 verify = cal_xor(&packet[3], 132);
+        packet[135] = verify;
+        writeData((char*)packet, 137, false);   //不显示日志
+        //等待应答
+        stmUpdateMutex.lock();
+        if(!stmUpdateCond.wait(&stmUpdateMutex, 1000 * 2))  //等待超时2秒
+        {
+            //等到回应包超时,回到0x19
+            stmUpdateMutex.unlock();
+            file.close();
+            return 0;
+        }
+        stmUpdateMutex.unlock();
+        nReadByte = file.read((char*)&packet[7], 128);
+    }
+    file.atEnd() ? ret_flag = 1 : ret_flag = 0;
+    qDebug("Send Stm update bin data finished, ret_flag is %d\n",ret_flag);
+    if(ret_flag)//判断是不是已经到了文件尾部
+    {
+        QMutexLocker locker(&stmUpdateMutex);
+        qDebug("Total send count: [%d], total receive count: [%d]\n",
+               nSendCount, m_updateStm_updateAnswer);
+        ret_flag = 1;
+    }
+    else//文件读取发生错误
+    {
+        QMutexLocker locker(&stmUpdateMutex);
+        qDebug("error occured!! Total send count:[%d]包!, total receive count: [%d]\n",
+               nSendCount,m_updateStm_updateAnswer);
+        ret_flag = -1;
+    }
+    file.close();
+    sleep(1);
+
+    QMutexLocker locker(&stmUpdateMutex);
+    if(	m_updateStm_updateAnswer < nSendCount ) //有丢包发生
+    {
+        qDebug("Bin file transfer pack loss found, send[%d]->reply[%d]\n",
+               nSendCount,m_updateStm_updateAnswer);
+        ret_flag = 0;
+    }
+    return ret_flag;
+}
+
+/** @function
+********************************************************************************
+<PRE>
+函数名: sendStmBoot
+功能: 发送指定命令字到单片机
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: stmUpdaterThread类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
+void stmUpdaterThread::sendStmBoot(quint8 cmd)
+{
+    quint8 sendBuf[7]= { 0 };
+    quint8 index=0;
+    qDebug("[stmUpdaterThread] send command 0x%02X to Stm.", cmd);
+
+    index=0;
+    ///////////////////
+    sendBuf[index++] = 0x00;    //CAN_SOURCEID
+    sendBuf[index++] = 0x00;    //CAN_DESTID
+    sendBuf[index++] = 0xAA;
+    sendBuf[index++] = 0x02;
+    /*LEN: COMMAND+DATA+VERIFY(一个字节)*/
+    sendBuf[index++] = cmd;
+    /*VERIFY= LEN XOR COMMAND XOR DATA*/
+    sendBuf[index++] = cal_xor(&sendBuf[3],2);
+    sendBuf[index++] = 0xCC;
+
+    writeData((char*)sendBuf, index);
+}
+
+/** @function
+********************************************************************************
+<PRE>
+函数名: cal_xor
+功能:  计算校验和
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注: stmUpdaterThread类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
+quint8 stmUpdaterThread::cal_xor(const quint8 *data, int count)
+{
+    quint8 verify = 0;
+    for(int i=0;i<count;i++)
+    {
+        verify ^= data[i];
+    }
+    return verify;
+}
+
+/** @function
+********************************************************************************
+<PRE>
+函数名: writeData
+功能: 写串口数据
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注:stmUpdaterThread类成员函数
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+void stmUpdaterThread::writeData(char *data, int datalen, bool isDisplay)
+{
+    int wlen = write(*stmfd, data, datalen);
+    if(isDisplay)
+    {
+        printf("Send %d bytes data to stm:", wlen);
+        for(int i = 0; i != datalen; i++)
+        {
+            printf(" %02X", data[i]);
+        }
+        printf("\n");
+    }
 }
