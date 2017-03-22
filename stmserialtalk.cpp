@@ -6,6 +6,9 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include "appUpdater.h"
+#ifndef Q_MOC_RUN
+#include "../boost_1_58_0/boost_include.h"
+#endif
 
 //stmSerialTalk::stmSerialTalk(QWidget *parent) : QWidget(parent)
 stmSerialTalk::stmSerialTalk() : stmUpdater(new stmUpdaterThread(&stmfd))
@@ -14,7 +17,7 @@ stmSerialTalk::stmSerialTalk() : stmUpdater(new stmUpdaterThread(&stmfd))
     m_pReadDataFunc = &stmSerialTalk::readData;
     qDebug("kira --- Initial stm32 talk");
     stmSerialData.devName = "ttySP2";
-    stmSerialData.baudRate = "B115200";
+    stmSerialData.baudRate = "B115200";//"B57600";
     stmSerialData.dataBit = "8";
     stmSerialData.parity = "none";
     stmSerialData.stopBit = "1";
@@ -127,16 +130,20 @@ void stmSerialTalk::readData()
     char cmd;
     int datalen;
     recvLen = read(stmfd, stmbuf, headlen);
+#if 0
     qDebug("kira --- receive stmInfo head over...");
     for(int i=0; i<headlen; i++)
         qDebug("stmfd: %.2x", stmbuf[i]);
+#endif
     if(0 == checkHead((char*)stmbuf, &datalen, &cmd))
     {
-        usleep(50*1000);
+     //   usleep(50*1000);
         recvLen = read(stmfd, &stmbuf[headlen], datalen+1);
+#if 0
         for(int i=0; i<datalen+7; i++)
             printf("%.2x ", stmbuf[i]);
         printf("\n");
+#endif
         if(0 == checkVertify((char*)stmbuf, datalen+7))
         {
             switch(cmd)
@@ -145,11 +152,18 @@ void stmSerialTalk::readData()
                     processPress((char*)&stmbuf[6], datalen);
                     break;
                 case 0xA2:
-                    processCardTradeInfo((char*)&stmbuf[6], datalen);
                     processUnionPayProcA2();
+                    processCardTradeInfo((char*)&stmbuf[6], datalen);
                     break;
                 case 0xA3:
                     processUnionPayTermMkInfo((char*)&stmbuf[6], datalen);
+                    break;
+                case 0xB1:
+                    printf("pscam ret ack: ");
+                    for(int i=0; i<datalen; i++)
+                        printf("%.2x ",stmbuf[i+6]);
+                    printf("\n");
+                    emit recvPscamAck(stmbuf[6]);
                     break;
                 case 0x21:  //单片机升级重启回应指令
                     if(!stmUpdater)
@@ -208,6 +222,7 @@ void stmSerialTalk::run()
     fd_set  sets;
     struct timeval val;
     printf("start stmSerialTalk 115200... \n");
+
     while(1)
     {
         QMutexLocker locker(&threadMutex);
@@ -215,7 +230,7 @@ void stmSerialTalk::run()
         FD_SET(stmfd, &sets);
 
         val.tv_sec = 0;
-        val.tv_usec = 500*1000;
+        val.tv_usec = 5*1000;//500*1000
         ret = select(stmfd+1, &sets, NULL, NULL, &val);
         if (ret == -1)
         {
@@ -223,8 +238,8 @@ void stmSerialTalk::run()
         }
         else if(ret)
         {
-            usleep(10 * 1000);
-            //debug-end
+         //   usleep(20);
+            msleep(20);
             if(FD_ISSET(stmfd, &sets))
             {
                 //readData();
@@ -296,8 +311,15 @@ void stmSerialTalk::writeData(char* data, int datalen)
 {
     int wlen = write(stmfd, data, datalen);
     qDebug("kira --- stm write data datalen=%d, wlen=%d", datalen, wlen);
-    QString writeData = QByteArray::fromRawData(data, datalen).toHex();
-    qDebug(qPrintable(writeData));
+    //QString writeData = QByteArray::fromRawData(data, datalen).toHex();
+    //qDebug(qPrintable(writeData));
+#if 1
+    for(int i=0; i<datalen; i++)
+    {
+        printf("%.2x ", data[i]);
+    }
+    printf("\n");
+#endif
 }
 
 void stmSerialTalk::stmVoiceCmd(char type)
@@ -571,7 +593,7 @@ void stmSerialTalk::processUnionPayProcA2()
 
 void stmSerialTalk::processUnionPayProcA1()
 {
-    qDebug("kira ---deal processUnionPayPrecA1...");
+    qDebug("kira --- deal processUnionPayPrecA1...");
 
 #if 1
     QString currentDateTime = QDateTime::currentDateTime().addSecs(UTC_TIMEDIFF).toString("yyyyMMddhhmmss");
@@ -599,6 +621,30 @@ void stmSerialTalk::processUnionPayProcA1()
     memcpy(&data[6], dateTime, 7);
     int itickets = (int)(tickets.toDouble()*100);
     memcpy(&data[13], &itickets, 4);
+    for(int i=0; i<6+len; i++)
+        check ^= data[i];
+    data[6+len] = check;
+
+    writeData(data, len+7);
+}
+
+void stmSerialTalk::stmSendPsamInfo(pscamInfo_t l_pscamInfo)
+{
+    char check = 0;
+    char data[256];
+    int len = 4 + l_pscamInfo.cardNoLen + l_pscamInfo.cardDataLen;
+
+    data[0] = 0x55;
+    data[1] = 0x7a;
+    data[2] = 0xB1;
+    memcpy(&data[3], &len, 2);
+    data[5] = 0x00;
+
+    memcpy(&data[6], &l_pscamInfo.cardNoLen, 2);
+    memcpy(&data[6+2], &l_pscamInfo.cardDataLen, 2);
+    memcpy(&data[6+2+2], l_pscamInfo.cardNo, l_pscamInfo.cardNoLen);
+    memcpy(&data[6+2+2+l_pscamInfo.cardNoLen], l_pscamInfo.cardData, l_pscamInfo.cardDataLen);
+
     for(int i=0; i<6+len; i++)
         check ^= data[i];
     data[6+len] = check;
