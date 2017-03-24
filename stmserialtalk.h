@@ -41,7 +41,7 @@ signals:
     void recvRightpress();
     void recvCardTradeInfoA2();
     void recvTermMkInfoA3();
-	void recvPscamAck(char);    // v2 --- 2017.3.15
+    void recvPscamAck(char);    // v2 --- 2017.3.15
 
 public:
     void stmVoiceCmd(char type);
@@ -55,7 +55,8 @@ public:
     void stmVoiceDriverSign(char cmd);
     void stmClearLEDDisp();
     void stmSendPsamInfo(pscamInfo_t l_pscamInfo);
-	
+    void stmSendData(unsigned char command, char* pdata, int len);
+
 public:
     void setBalance(const QString& sbalance) { balance = sbalance; }
     void getBalance(QString& gbalance) { gbalance = balance; }

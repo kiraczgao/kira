@@ -18,6 +18,7 @@ class posWidget : public QWidget
 public:
     explicit posWidget(QWidget *parent = 0);
     ~posWidget();
+    void setVersion(QString& ver);
     void setTickets(QString& stickets);
     void getTickets(QString& gtickets) { gtickets = tickets; }
     void setBusID(const QString& sbusID);

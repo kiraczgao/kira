@@ -181,6 +181,22 @@ void stmSerialTalk::readData()
                         stmUpdateTimer.start();
                     }
                     break;
+                case 0xB1:
+                    printf("pscam ret ack: ");
+                    for(int i=0; i<datalen; i++)
+                        printf("%.2x ",stmbuf[i+6]);
+                    printf("\n");
+                    emit recvPscamAck(stmbuf[6]);
+                    break;
+                case 0xBF:
+                {
+                    printf("qwy---BF\n");
+                    msleep(10);
+                   // char cdata = 0x00;
+                    stmSendData(0xBF,(char*)&stmbuf[6],datalen);
+                    printf("qwy---send BF\n");
+                }
+                    break;
             }
         }
     }
@@ -628,6 +644,55 @@ void stmSerialTalk::processUnionPayProcA1()
     writeData(data, len+7);
 }
 
+<<<<<<< HEAD
+void stmSerialTalk::stmSendData(unsigned char command, char* pdata, int len)
+{
+    char check = 0;
+    char data[256];
+    memset(data,0,256);
+
+    data[0] = 0x55;
+    data[1] = 0x7a;
+    data[2] = command;
+    memcpy(&data[3], &len, 2);
+    data[5] = 0x00;
+    if(len>0){
+        memcpy(&data[6],pdata,len);
+    }
+
+    for(int i=0; i<6+len; i++)
+        check ^= data[i];
+    data[6+len] = check;
+
+    writeData(data, len+7);
+}
+
+void stmSerialTalk::stmSendPsamInfo(pscamInfo_t l_pscamInfo)
+{
+    char check = 0;
+    char data[256];
+    int len = 4 + l_pscamInfo.cardNoLen + l_pscamInfo.cardDataLen;
+
+    data[0] = 0x55;
+    data[1] = 0x7a;
+    data[2] = 0xB1;
+    memcpy(&data[3], &len, 2);
+    data[5] = 0x00;
+
+    memcpy(&data[6], &l_pscamInfo.cardNoLen, 2);
+    memcpy(&data[6+2], &l_pscamInfo.cardDataLen, 2);
+    memcpy(&data[6+2+2], l_pscamInfo.cardNo, l_pscamInfo.cardNoLen);
+    memcpy(&data[6+2+2+l_pscamInfo.cardNoLen], l_pscamInfo.cardData, l_pscamInfo.cardDataLen);
+
+    for(int i=0; i<6+len; i++)
+        check ^= data[i];
+    data[6+len] = check;
+
+    writeData(data, len+7);
+}
+
+=======
+>>>>>>> af156bc2ca604f4d4d70e232bfa3b2c296f8709c
 void stmSerialTalk::stmSendPsamInfo(pscamInfo_t l_pscamInfo)
 {
     char check = 0;

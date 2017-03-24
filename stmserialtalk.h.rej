@@ -1,0 +1,9 @@
+diff a/stmserialtalk.h b/stmserialtalk.h	(rejected hunks)
+@@ -41,7 +41,6 @@
+     void recvRightpress();
+     void recvCardTradeInfoA2();
+     void recvTermMkInfoA3();
+-    void recvPscamAck(char);    // v2 --- 2017.3.15
+ 
+ public:
+     void stmVoiceCmd(char type);
