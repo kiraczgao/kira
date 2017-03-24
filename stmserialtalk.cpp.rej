@@ -1,0 +1,14 @@
+diff a/stmserialtalk.cpp b/stmserialtalk.cpp	(rejected hunks)
+@@ -151,12 +151,6 @@
+                 case 0xA3:
+                     processUnionPayTermMkInfo((char*)&stmbuf[6], datalen);
+                     break;
+-                case 0xB1:
+-                    printf("pscam ret ack: ");
+-                    for(int i=0; i<datalen; i++)
+-                        printf("%.2x ",stmbuf[i+6]);
+-                    printf("\n");
+-                    emit recvPscamAck(stmbuf[6]);
+                 case 0x21:  //��Ƭ�����������Ӧָ��
+                     if(!stmUpdater)
+                     {
