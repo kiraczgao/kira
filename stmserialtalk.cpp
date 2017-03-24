@@ -6,6 +6,9 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include "appUpdater.h"
+#ifndef Q_MOC_RUN
+#include "../boost_1_58_0/boost_include.h"
+#endif
 
 //stmSerialTalk::stmSerialTalk(QWidget *parent) : QWidget(parent)
 stmSerialTalk::stmSerialTalk() : stmUpdater(new stmUpdaterThread(&stmfd))
@@ -14,7 +17,7 @@ stmSerialTalk::stmSerialTalk() : stmUpdater(new stmUpdaterThread(&stmfd))
     m_pReadDataFunc = &stmSerialTalk::readData;
     qDebug("kira --- Initial stm32 talk");
     stmSerialData.devName = "ttySP2";
-    stmSerialData.baudRate = "B115200";
+    stmSerialData.baudRate = "B115200";//"B57600";
     stmSerialData.dataBit = "8";
     stmSerialData.parity = "none";
     stmSerialData.stopBit = "1";
@@ -155,6 +158,13 @@ void stmSerialTalk::readData()
                 case 0xA3:
                     processUnionPayTermMkInfo((char*)&stmbuf[6], datalen);
                     break;
+                case 0xB1:
+                    printf("pscam ret ack: ");
+                    for(int i=0; i<datalen; i++)
+                        printf("%.2x ",stmbuf[i+6]);
+                    printf("\n");
+                    emit recvPscamAck(stmbuf[6]);
+                    break;
                 case 0x21:  //单片机升级重启回应指令
                     if(!stmUpdater)
                     {
@@ -228,6 +238,7 @@ void stmSerialTalk::run()
     fd_set  sets;
     struct timeval val;
     printf("start stmSerialTalk 115200... \n");
+
     while(1)
     {
         QMutexLocker locker(&threadMutex);
@@ -243,8 +254,8 @@ void stmSerialTalk::run()
         }
         else if(ret)
         {
-            usleep(10 * 1000);
-            //debug-end
+         //   usleep(20);
+            msleep(20);
             if(FD_ISSET(stmfd, &sets))
             {
                 //readData();
@@ -316,8 +327,15 @@ void stmSerialTalk::writeData(char* data, int datalen)
 {
     int wlen = write(stmfd, data, datalen);
     qDebug("kira --- stm write data datalen=%d, wlen=%d", datalen, wlen);
-    QString writeData = QByteArray::fromRawData(data, datalen).toHex();
-    qDebug(qPrintable(writeData));
+    //QString writeData = QByteArray::fromRawData(data, datalen).toHex();
+    //qDebug(qPrintable(writeData));
+#if 1
+    for(int i=0; i<datalen; i++)
+    {
+        printf("%.2x ", data[i]);
+    }
+    printf("\n");
+#endif
 }
 
 void stmSerialTalk::stmVoiceCmd(char type)
@@ -591,7 +609,7 @@ void stmSerialTalk::processUnionPayProcA2()
 
 void stmSerialTalk::processUnionPayProcA1()
 {
-    qDebug("kira ---deal processUnionPayPrecA1...");
+    qDebug("kira --- deal processUnionPayPrecA1...");
 
 #if 1
     QString currentDateTime = QDateTime::currentDateTime().addSecs(UTC_TIMEDIFF).toString("yyyyMMddhhmmss");
@@ -626,6 +644,7 @@ void stmSerialTalk::processUnionPayProcA1()
     writeData(data, len+7);
 }
 
+<<<<<<< HEAD
 void stmSerialTalk::stmSendData(unsigned char command, char* pdata, int len)
 {
     char check = 0;
@@ -672,6 +691,8 @@ void stmSerialTalk::stmSendPsamInfo(pscamInfo_t l_pscamInfo)
     writeData(data, len+7);
 }
 
+=======
+>>>>>>> af156bc2ca604f4d4d70e232bfa3b2c296f8709c
 void stmSerialTalk::stmSendPsamInfo(pscamInfo_t l_pscamInfo)
 {
     char check = 0;

@@ -3107,7 +3107,7 @@ void myPosWidget::processPosFtpInfo()
 
         // v2 --- 2017.3.14
         appUpdaterError upRet;
-        upRet = myAppUpdater.processUpdate(posFtpInfo);
+        upRet = myAppUpdater.processUpdate(posFtpInfo, scanPosStmTalk);
         if(noError == upRet)
         {
             ;

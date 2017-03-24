@@ -842,7 +842,7 @@ void stmUpdaterThread::run()
     while(nFlag <= 0 && nRetryTimes < MAX_RETRY_TIMES)
     {
         //如果升级状态返回为0则一直执行，直至升级完成
-        nFlag = updateStmApp(&nRetryTimes);
+        nFlag = updateStmApp(nRetryTimes);
         if(nFlag < 0)
         {
             qDebug("updateStmApp failed, return code: %d, retry!", nFlag);
