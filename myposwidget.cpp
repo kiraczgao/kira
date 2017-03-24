@@ -35,6 +35,10 @@ myPosWidget::myPosWidget(QWidget *parent) :
     scanPosTalk = new posWidget();
     scanPosTalk->setTickets(tickets);
     scanPosTalk->setBusID(busID);
+    QString version = LVersion;
+    version += " ";
+    version += SVersion;
+    scanPosTalk->setVersion(version);
     // 初始化交易UI
     scanPosTradeTalk = new tradeDialog();
     connect(scanPosTradeTalk, SIGNAL(backPosWidget()), this, SLOT(showPosWidget()));

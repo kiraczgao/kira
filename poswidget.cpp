@@ -47,6 +47,13 @@ void posWidget::onTimerOut()
     ui->dateTimeEdit->setDateTime(ldate);
 }
 
+void posWidget::setVersion(QString &ver)
+{
+    qDebug("qwy --- set version: ");
+    qDebug(qPrintable(ver));
+    ui->version->setText(ver);
+}
+
 void posWidget::setTickets(QString &stickets)
 {
     tickets = stickets;

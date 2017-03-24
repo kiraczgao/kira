@@ -51,6 +51,7 @@ public:
     void stmVoiceDriverSign(char cmd);
     void stmClearLEDDisp();
     void stmSendPsamInfo(pscamInfo_t l_pscamInfo);
+    void stmSendData(unsigned char command, char* pdata, int len);
 
 public:
     void setBalance(const QString& sbalance) { balance = sbalance; }

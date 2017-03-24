@@ -157,6 +157,15 @@ void stmSerialTalk::readData()
                     printf("\n");
                     emit recvPscamAck(stmbuf[6]);
                     break;
+                case 0xBF:
+                {
+                    printf("qwy---BF\n");
+                    msleep(10);
+                   // char cdata = 0x00;
+                    stmSendData(0xBF,(char*)&stmbuf[6],datalen);
+                    printf("qwy---send BF\n");
+                }
+                    break;
             }
         }
     }
@@ -594,6 +603,28 @@ void stmSerialTalk::processUnionPayProcA1()
     memcpy(&data[6], dateTime, 7);
     int itickets = (int)(tickets.toDouble()*100);
     memcpy(&data[13], &itickets, 4);
+    for(int i=0; i<6+len; i++)
+        check ^= data[i];
+    data[6+len] = check;
+
+    writeData(data, len+7);
+}
+
+void stmSerialTalk::stmSendData(unsigned char command, char* pdata, int len)
+{
+    char check = 0;
+    char data[256];
+    memset(data,0,256);
+
+    data[0] = 0x55;
+    data[1] = 0x7a;
+    data[2] = command;
+    memcpy(&data[3], &len, 2);
+    data[5] = 0x00;
+    if(len>0){
+        memcpy(&data[6],pdata,len);
+    }
+
     for(int i=0; i<6+len; i++)
         check ^= data[i];
     data[6+len] = check;
