@@ -475,7 +475,7 @@ enum appUpdaterError appUpdater::__processUpdate(const posFtpInfo_t& ftpInfo, st
     QString strlocalFile(UPDATE_DIR), strFtpFile(ftpInfo.ftpPath);
     //将ftp路径中的反斜杠换成斜杠
     strFtpFile.replace(QChar('\\'), QChar('/'));
-    if(ftpInfo.version.toLower()[0] == QChar('p'))
+    if(ftpInfo.version.toLower().at(0) == QChar('p'))
     {
         //主程序开头为p
         strlocalFile += MAIN_FILE;
@@ -488,7 +488,7 @@ enum appUpdaterError appUpdater::__processUpdate(const posFtpInfo_t& ftpInfo, st
         strFtpFile += MAIN_FILE;
         nUpdateType = MAIN_UPDATE_TYPE;
     }
-    else if(ftpInfo.version.toLower()[0] == QChar('s'))
+    else if(ftpInfo.version.toLower().at(0) == QChar('s'))
     {
         //单片机程序开头为s
         strlocalFile += CARDREADER_FILE;

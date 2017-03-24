@@ -121,6 +121,9 @@ public slots:
     // pscam
     void processPscamAck(char retAck);
 
+    //update stm complete
+    void processStmUpdateSuccess();
+
 public slots:
     void onTimerOut();
     void failTimerOut();
@@ -222,6 +225,7 @@ public slots:
 public:
     appUpdater myAppUpdater;
     bool judgeUp;
+    bool judgeUpStm;
     bool judgeFtpWork;
     int sendUpdataInfo(int type);
 

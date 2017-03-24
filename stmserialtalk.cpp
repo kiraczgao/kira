@@ -28,8 +28,8 @@ stmSerialTalk::stmSerialTalk() : stmUpdater(new stmUpdaterThread(&stmfd))
 
     //初始化单片机升级定时器
     stmUpdateTimer.setInterval(MAX_STM_UPDATE_TIME);
-    connect(&stmUpdateTimer, SIGNAL(timeout()), this, SLOT(stmUpdateFail()));
-    connect(stmUpdater, SIGNAL(stmUpdateFail()), this, SLOT(stmUpdateFail()));
+    connect(&stmUpdateTimer, SIGNAL(timeout()), this, SLOT(processStmUpdateFail()));
+    connect(stmUpdater, SIGNAL(stmUpdateFail()), this, SLOT(processStmUpdateFail()));
 }
 
 bool stmSerialTalk::openSerial()
@@ -749,6 +749,8 @@ void stmSerialTalk::readDataBoot()
         stmUpdateTimer.stop();
         //停止升级线程
         stmUpdater->exit();
+        //发送单片机升级成功信号
+        emit stmUpdateSuccess();
         break;
     //删除应用程序完成
     case 0x17:
@@ -784,7 +786,7 @@ void stmSerialTalk::readDataBoot()
     }
 }
 
-void stmSerialTalk::stmUpdateFail()
+void stmSerialTalk::processStmUpdateFail()
 {
     //单片机升级失败处理
     qDebug("stmUpdateFail signal catched, update failed.");
