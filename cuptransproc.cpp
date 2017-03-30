@@ -190,7 +190,7 @@ int CUPTransProc::GenNewBatch()
 }
 
 //获取脱机消费报文ANS
-int CUPTransProc::GetOfflineConsumeMsg(char* chFiled37, char chFiled37Len, char* pi_chPansn, int i_iTransAmt, unsigned char* pi_ucIccData, int i_iIccDataLen, unsigned char* pio_ucMsg, int* pio_iMsgLen,char *T_5f24)
+int CUPTransProc::GetOfflineConsumeMsg(unionPayInfo_t* pTag, char* chFiled37, char chFiled37Len, char* pi_chPansn, int i_iTransAmt, unsigned char* pi_ucIccData, int i_iIccDataLen, unsigned char* pio_ucMsg, int* pio_iMsgLen,char *T_5f24)
 {
     char chLen[5];
     char chSeq[7];
@@ -199,6 +199,9 @@ int CUPTransProc::GetOfflineConsumeMsg(char* chFiled37, char chFiled37Len, char*
     char chFiled53[17];
     char chFiled60[18];
     char i;
+    //填充 63域
+    char chFiled63[125];
+    memset(chFiled63,0x20,123);
 
     unsigned char ucMac1[16];
     //unsigned char ucMac[16];
@@ -254,6 +257,17 @@ int CUPTransProc::GetOfflineConsumeMsg(char* chFiled37, char chFiled37Len, char*
     ASSERT_FAIL(CUP8583_SetField(&Msg8583, 55, (char*)pi_ucIccData, i_iIccDataLen));
     ASSERT_FAIL(CUP8583_SetField(&Msg8583, 60, chFiled60, strlen(chFiled60)));
     //  ASSERT_FAIL(CUP8583_SetField(&Msg8583, 63, "CUP", 3));
+    memcpy(chFiled63,"CUP",3);
+    //备注  data 数据需要转换为 ANS
+    memcpy(chFiled63+63,"006",3);
+    memcpy(chFiled63+66,pTag->busline,strlen(pTag->busline));
+    memcpy(chFiled63+74,pTag->busID,strlen(pTag->busID));
+    memcpy(chFiled63+82,pTag->driverID,strlen(pTag->driverID));
+    memcpy(chFiled63+98,pTag->longitude,strlen(pTag->longitude));
+    memcpy(chFiled63+110,pTag->latitude,strlen(pTag->latitude));
+    ASSERT_FAIL(CUP8583_SetField(&Msg8583, 63, chFiled63, 123));
+    printf("qwy---63:%s\n",chFiled63);
+
     ASSERT_FAIL(CUP8583_SetField(&Msg8583, 64, "\x30\x30\x30\x30\x30\x30\x30\x00", 8));
     ASSERT_FAIL(CUP8583_GetBuf(&Msg8583, pio_ucMsg + 13, pio_iMsgLen));
 

@@ -6,6 +6,7 @@
 #include "setconfig.h"
 #include <QDebug>
 #include <QString>
+#include "datastructure.h"
 
 class CUPTransProc : public CUP8583, public setConfig
 {
@@ -51,7 +52,7 @@ public:
     int GetConsumeMsg(char* pi_chPan,int i_iTransAmt,unsigned char* pio_ucMsg,int* pio_iMsgLen);
 
     //获取脱机消费报文
-    int GetOfflineConsumeMsg(char* chFiled37, char chFiled37Len, char* pi_chPansn, int i_iTransAmt, unsigned char* pi_ucIccData, int i_iIccDataLen, unsigned char* pio_ucMsg, int* pio_iMsgLen,char *T_5f24);
+    int GetOfflineConsumeMsg(unionPayInfo_t* pTag, char* chFiled37, char chFiled37Len, char* pi_chPansn, int i_iTransAmt, unsigned char* pi_ucIccData, int i_iIccDataLen, unsigned char* pio_ucMsg, int* pio_iMsgLen,char *T_5f24);
     int GetConsumeMsgReversing(char* chFiled37, char chFiled37Len,char* pi_chPansn, int i_iTransAmt, unsigned char* pi_ucIccData, int i_iIccDataLen, unsigned char* pio_ucMsg, int* pio_iMsgLen,char *T_5f24);
 
     int GetbanlanceMsg(unsigned char* pio_ucMsg, int* pio_iMsgLen);

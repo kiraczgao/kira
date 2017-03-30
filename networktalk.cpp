@@ -349,7 +349,7 @@ again:
     {
         printf("kira --- try to connect server \n");
         socketfd = network.socketConnect(serverIP.toLatin1().data(), serverPort.toInt());
-        printf("kira --- socket = %d \n", socketfd);
+    //    printf("kira --- socket = %d \n", socketfd);
         if(socketfd > 0)
         {
             setsockopt(socketfd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag));

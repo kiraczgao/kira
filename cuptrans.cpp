@@ -268,7 +268,7 @@ int CUPTrans::OfflineConsume(unionPayInfo_t* pTag,char* pi_chPan,char pi_chPanLe
     ifield39 = 0;
     CUP8583_MSG cup8583Msg;
     //获取消费报文
-    if(GetOfflineConsumeMsg(pi_chPan,pi_chPanLen, pi_chPanSn, i_iTransAmt, pi_ucIccData, i_iIccDataLen, ucSendMsg, &iSendMsgLen,T_5f24) != SLSY_TRANS_SUCCESS)
+    if(GetOfflineConsumeMsg(pTag,pi_chPan,pi_chPanLen, pi_chPanSn, i_iTransAmt, pi_ucIccData, i_iIccDataLen, ucSendMsg, &iSendMsgLen,T_5f24) != SLSY_TRANS_SUCCESS)
         return SLSY_TRANS_ERROR;
 
     //发送报文

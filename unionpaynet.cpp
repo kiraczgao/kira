@@ -68,6 +68,7 @@ int UnionPayNet::connect2server_nob(int *err)
     fcntl (socket_online, F_SETFL, flags|O_NONBLOCK);
     if ((ret = connect(socket_online, (struct sockaddr*)&mysin_online, sizeof(mysin_online))) < 0)
     {
+   //     printf("qwy---connect err:%d\n",errno);
         if (errno != EINPROGRESS)
         {
             *err = errno;
@@ -139,7 +140,6 @@ int UnionPayNet::SendRecvMsg(unsigned char *sendData,int lenth_send,unsigned cha
     unsigned char str[200] = {0};
     unsigned char cmd[100] = {0};
     Pthread_mutex_lock(&socket_mutex);
-    printf("socket = %d \n", socket_online);
 
 begin:
     count++;
@@ -212,6 +212,9 @@ begin:
     {
         printf("select 失败\n");
         Pthread_mutex_unlock(&socket_mutex);
+        //short connect
+        close(socket_online);
+        socket_online = -1;
         return -1;
     }
 #endif
@@ -235,13 +238,21 @@ begin:
                 goto begin;
             }
             else
+            {
+                //short connect
+                close(socket_online);
+                socket_online = -1;
                 return -2;
+            }
         }
 
         if(ret_write != lenth_send)
         {
             printf("写socket错误 \n");
             Pthread_mutex_unlock(&socket_mutex);
+            //short connect
+            close(socket_online);
+            socket_online = -1;
             return -2;
         }
         else
@@ -264,7 +275,9 @@ begin:
     {
         printf("写数据失败=== \n");
         Pthread_mutex_unlock(&socket_mutex);
-
+        //short connect
+        close(socket_online);
+        socket_online = -1;
         return -1;
     }
 
@@ -288,6 +301,9 @@ again:
                 // sprintf(pi_chErrMsg,"服务端已关闭连接");
                 printf("====exit send_socket_fd==== \n");
                 Pthread_mutex_unlock(&socket_mutex);
+                //short connect
+                close(socket_online);
+                socket_online = -1;
                 return -6;
             }
 
@@ -301,6 +317,9 @@ again:
                     goto again;
                 }
                 Pthread_mutex_unlock(&socket_mutex);
+                //short connect
+                close(socket_online);
+                socket_online = -1;
                 return -6;
             }
             bufferlen += retlen;
@@ -320,6 +339,9 @@ again:
             //pio_ucRecvMsg = recvbuf;
             *pio_iRecvMsgLen = bufferlen;
             Pthread_mutex_unlock(&socket_mutex);
+            //short connect
+            close(socket_online);
+            socket_online = -1;
             return 0;
         }
     }
@@ -327,10 +349,15 @@ again:
     {
         printf("接收失败\n");
         Pthread_mutex_unlock(&socket_mutex);
+        //short connect
+        close(socket_online);
+        socket_online = -1;
         return -6;
     }
-
     Pthread_mutex_unlock(&socket_mutex);
+    //short connect
+    close(socket_online);
+    socket_online = -1;
     return -6;
 }
 
