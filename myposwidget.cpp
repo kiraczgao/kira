@@ -122,6 +122,8 @@ myPosWidget::myPosWidget(QWidget *parent) :
     connect(scanPosNetTalk, SIGNAL(recvUnionpayAck_v1(unionPayAck_t)),this,SLOT(processUnionpayAck_v1(unionPayAck_t)));
     // up
     connect(scanPosNetTalk, SIGNAL(recvUpdataInfoAck()), this, SLOT(processUpdataInfoAck()));
+    // up stm
+    connect(scanPosStmTalk, SIGNAL(stmUpdateSuccess()), this, SLOT(processStmUpdateSuccess()));
 #endif
 
     // 初始化GPS串口
@@ -223,7 +225,8 @@ myPosWidget::myPosWidget(QWidget *parent) :
 
     isAskKey = true;
     isAskBlack = true;
-    judgeUp - false;
+    judgeUp = false;
+    judgeUpStm = false;
     judgeFtpWork = false;
     scanPosScanTalk->tradeRledCtrl(0);
     scanPosScanTalk->tradeGledCtrl(0);
@@ -1241,10 +1244,10 @@ void myPosWidget::processWeixinBeatAck_v1()
                 STempVersion = l_SVersion;
                 askPosSVersionUpdata();
                 judgeFtpWork = true;
-                sendUpdataInfo(1);
+                //sendUpdataInfo(1);
                 configSet.writeSetInfo(configFile, workgroup, "STempVersion", l_SVersion);
-                SVersion = l_SVersion;
-                configSet.writeSetInfo(configFile, workgroup, "SVersion", l_SVersion);
+                //SVersion = l_SVersion;
+                //configSet.writeSetInfo(configFile, workgroup, "SVersion", l_SVersion);
             }
             else
             {
@@ -1256,6 +1259,11 @@ void myPosWidget::processWeixinBeatAck_v1()
     if(true == judgeUp)
     {
         sendUpdataInfo(0);
+    }
+
+    if(true == judgeUpStm)
+    {
+        sendUpdataInfo(1);
     }
 }
 
@@ -1322,8 +1330,13 @@ void myPosWidget::processUpdataInfoAck()
     }
     else if((STempVersion == retStr) && ('0' == ackInfo.ret))
     {
-        qDebug("kira --- pos updata info send success...");
-
+        QString strShellCmd = "rm -rf ";
+        strShellCmd += appUpdater::UPDATE_DIR;
+        strShellCmd += appUpdater::CARDREADER_FILE;
+        system(strShellCmd.toLatin1().constData());
+        qDebug("kira --- cardreader updata info send success...");
+        judgeUpStm = false;
+        configSet.writeSetInfo(configFile, workgroup, "SVersion", STempVersion);
     }
     else
     {
@@ -1435,6 +1448,11 @@ void myPosWidget::processPscamAck(char retAck)
         //scanPosStmTalk->stmVoiceCmd(10);
         qDebug("kira --- vcity发送交易记录失败...");
     }
+}
+
+void myPosWidget::processStmUpdateSuccess()
+{
+    judgeUpStm = true;
 }
 
 // kira added - 2017.3.7

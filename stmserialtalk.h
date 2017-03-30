@@ -119,8 +119,11 @@ private:
     typedef void (stmSerialTalk::*readDataFunc)(void);
     readDataFunc m_pReadDataFunc;
 
+signals:
+    void stmUpdateSuccess();           //单片机升级成功信号
+
 private slots:
-    void stmUpdateFail();       //升级失败处理
+    void processStmUpdateFail();       //升级失败处理
 };
 
 #endif // STMSERIALTALK_H

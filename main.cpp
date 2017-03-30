@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #define PIDFILE "/opt/kira/pidfile.txt"
-#define POS_VERSION "V3.0.2_20161126-test \n"
+#define POS_VERSION "V3.1.0_20170324-test \n"
 
 int main(int argc, char *argv[])
 {
