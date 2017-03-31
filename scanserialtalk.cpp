@@ -250,7 +250,8 @@ void scanSerialTalk::onTimerOut()
     }
     else
     {
-        qDebug("kira --- emit recvScanInfo()...");
+        printf("kira --- emit recvScanInfo()...%d\n",recvLen);
+#if 0
         if(recvLen < MAX_WEIXIN_DATALEN+3)
         {
             memcpy(weixinScanInfo.scanData, scanbuf, recvLen-2);

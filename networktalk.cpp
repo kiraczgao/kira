@@ -340,6 +340,7 @@ void NetworkTalk::run()
     int headlen = 7;
     int totallen;
     int flag = 1;
+    int rebootnet = 0;
 
     QMutexLocker locker(&threadMutex);
 again:
@@ -349,7 +350,7 @@ again:
     {
         printf("kira --- try to connect server \n");
         socketfd = network.socketConnect(serverIP.toLatin1().data(), serverPort.toInt());
-        printf("kira --- socket = %d \n", socketfd);
+    //    printf("kira --- socket = %d \n", socketfd);
         if(socketfd > 0)
         {
             setsockopt(socketfd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag));
@@ -357,6 +358,19 @@ again:
         }
         else
         {
+            rebootnet++;
+            if(rebootnet>3)
+            {
+                unsigned char cmd_s[100] = {0};
+                sprintf((char*)cmd_s, "/opt/kira/netmodul.pri");
+                system((char*)cmd_s);
+                printf("%s \n", cmd_s);
+                printf("连接失败 \n");
+                //sprintf(str,"[3次连接失败重启4G模块]\n");
+                //logprintf(str, NULL, 0);
+                rebootnet = 0;
+                sleep(2);
+            }
             sleep(3);
             goto again;
         }

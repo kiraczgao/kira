@@ -235,8 +235,8 @@ typedef struct offlineHeadInfo_s
     char cityID[6];             //POS城市代码 ascii
     char tradeTime[14];			//交易时间YYYYMMDDHHMMSS
     char ticketPrice[4];		//票价信息 memcpy(ticketPrice, &price, 4);
-    char longitude[8];			//经度信息-预留
-    char latitude[8]; 			//纬度信息-预留
+    char longitude[12];			//经度信息-预留
+    char latitude[12]; 			//纬度信息-预留
     char driverID[16];          //司机ID ascii
 }offlineHeadInfo_t;
 
