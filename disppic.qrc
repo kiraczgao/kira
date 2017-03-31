@@ -13,7 +13,9 @@
         <file>images/uncheck.png</file>
         <file>images/quick.png</file>
         <file>images/bk.jpg</file>
-        <file>images/bd2.jpg</file>
         <file>images/pay.png</file>
+        <file>images/background2.png</file>
+        <file>images/trade2.png</file>
+        <file>images/parambk.png</file>
     </qresource>
 </RCC>

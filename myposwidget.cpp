@@ -48,6 +48,7 @@ myPosWidget::myPosWidget(QWidget *parent) :
     connect(scanPosScanTalk, SIGNAL(recvScanInfo()), this, SLOT(showTradeDialog()));
     connect(scanPosScanTalk, SIGNAL(recvDriveSignInfo()), this, SLOT(processDriveSign()));
     scanPosScanTalk->start();
+
     // 微信在线支付
     connect(scanPosScanTalk, SIGNAL(recvWeixinScanInfo()), this, SLOT(processWeixinScanInfo()));
     // Alipay
@@ -148,6 +149,10 @@ myPosWidget::myPosWidget(QWidget *parent) :
     scanPosDB->initDriverSignInfo(driverID);
     scanPosTalk->setdriverID(driverID);
     scanPosDB->clearUnionpayInfo();
+
+    //初始化参数页面
+    scanPosParam = new posparamwidget;
+
     //初始化是否处于签到状态
     m_bDriverSigned = false;
     if(driverID.length()>1)
@@ -176,9 +181,10 @@ myPosWidget::myPosWidget(QWidget *parent) :
     ui->myStackedWidget->addWidget(scanPosBusline);
     ui->myStackedWidget->addWidget(scanPosBlackClear);
     ui->myStackedWidget->addWidget(scanPosPosID);
-
     ui->myStackedWidget->addWidget(scanPosTalk);
     ui->myStackedWidget->addWidget(scanPosTradeTalk);
+    ui->myStackedWidget->addWidget(scanPosParam);
+
     if(!m_bDriverSigned)
         ui->myStackedWidget->setCurrentWidget(scanPosSignal);
     else
@@ -1537,6 +1543,14 @@ void myPosWidget::askPosSVersionUpdata()
     scanPosNetTalk->socketSend(verData, sizeof(verData), &sendlen);
 }
 
+void myPosWidget::updatePosParam()
+{
+    configSet.readSetInfo(configFile, workgroup, "busID", busID);
+    configSet.readSetInfo(configFile, workgroup, "buslineID", buslineID);
+    configSet.readSetInfo(configFile, workgroup, "posID", posID);
+    configSet.readSetInfo(configFile, workgroup, "tickets", tickets);
+}
+
 // Alipay
 void myPosWidget::askAlipayKeylist()
 {
@@ -2683,7 +2697,14 @@ void myPosWidget::processLongpress()
 
 void myPosWidget::processShowPosParam()
 {
-    //show pos param
+    //显示pos参数
+    scanPosParam->setPosID(posID);
+    scanPosParam->setBusID(busID);
+    scanPosParam->setLineID(posID);
+    scanPosParam->setTicket(tickets);
+    ui->myStackedWidget->setCurrentWidget(scanPosParam);
+    //定时
+    QTimer::singleShot(10 * 1000, this, SLOT(showPosWidget()));
 }
 
 void myPosWidget::processShortpress()

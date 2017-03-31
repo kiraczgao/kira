@@ -18,7 +18,7 @@
   </property>
   <property name="styleSheet">
    <string notr="true">#tradeDialog{ 
-border-image: url(:/images/bd2.jpg);
+border-image: url(:/images/trade2.png);
 }</string>
   </property>
   <widget class="QLabel" name="debitNameLabel">

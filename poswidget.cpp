@@ -13,6 +13,7 @@ posWidget::posWidget(QWidget *parent) :
     ui(new Ui::posWidget)
 {
     ui->setupUi(this);
+    _initPosWidget();
     //QFontDatabase::addApplicationFont(":/font/SWISSK.TTF");
     //QFontDatabase::addApplicationFont(":/font/SWISSK1.TTF");
     //ui->ticketsLabel->setFont(QFont("SWISSK", 2.00));
@@ -83,5 +84,27 @@ void posWidget::setdriverID(const QString &sdriverID)
 {
     driverID = sdriverID;
     ui->signLabel->setText(driverID);
+}
 
+void posWidget::_initPosWidget()
+{
+    //隐藏没有必要的标签
+    ui->ticketsNameLabel->hide();
+    ui->ticketsNameLabel_2->hide();
+    //放置NO:标签
+    ui->label->setGeometry(290,10,50,35);
+    ui->label->setText(QApplication::translate("posWidget",
+                                           "<html><head/><body><p><span style=\" font-weight:600;\">NO:</span></p></body></html>",
+                                           0,
+                                           QApplication::UnicodeUTF8));
+    //放置车辆编号lable
+    ui->busIDLabel->setGeometry(340,10,130,35);
+    //放置时间
+    ui->dateTimeEdit->setGeometry(40,10,240,35);
+    //放置票价信息
+    ui->ticketsLabel->setGeometry(100,125,280,80);
+    ui->ticketsLabel->setStyleSheet("color: rgb(255, 255, 255);\n"
+                                    "font: 80pt \"Arial\";\n"
+                                    "font-weight:600\n");
+    ui->signLabel->setGeometry(120,240,240,20);
 }

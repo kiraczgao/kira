@@ -42,7 +42,7 @@
    </property>
    <property name="styleSheet">
     <string notr="true">#frame { 
-	border-image: url(:/images/bd2.jpg);
+	border-image: url(:/images/background2.png);
 } 
 </string>
    </property>

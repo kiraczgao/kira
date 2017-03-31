@@ -22,6 +22,10 @@ public:
     void getDebit(QString& gdebit) { gdebit = debit; }
 
 private:
+    //初始化交易界面UI
+    void _initTradeDialogWidget();
+
+private:
     Ui::tradeDialog *ui;
 
 signals:

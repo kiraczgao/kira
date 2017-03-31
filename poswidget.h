@@ -31,6 +31,10 @@ public:
     void getdriverID(QString& gdriverID) { gdriverID = driverID; }
 
 private:
+    //初始化UI界面
+    void _initPosWidget();
+
+private:
     Ui::posWidget *ui;
 
 public slots:

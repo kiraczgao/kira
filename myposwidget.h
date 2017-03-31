@@ -22,6 +22,7 @@
 #include "unionpaystructure.h"
 #include "networktalk.h"
 #include "appUpdater.h"
+#include "posparamwidget.h"
 
 class QTimer;
 namespace Ui {
@@ -74,6 +75,9 @@ public:
     // version updata
     void askPosLVersionUpdata();
     void askPosSVersionUpdata();
+
+    //更新参数
+    void updatePosParam();
 
 public slots:
     void showTradeDialog();
@@ -217,6 +221,7 @@ public:
     busidWidget* scanPosBusID;
     buslineWidget* scanPosBusline;
     posidWidget* scanPosPosID;
+    posparamwidget* scanPosParam;
 
 public:
     cardreceiveA2 mycardreceiveA2;
