@@ -158,6 +158,12 @@ private:
     ///删除文件
     void __deleteFile(QFile *file);
 
+    ///检查文件是否存在或是否匹配
+    bool __checkFileExists(const QString &strFile, const QString &strCRC);
+
+    ///检测本地路径是否存在
+    void __checkLocalDir();
+
 //信号量
 signals:
     /**

@@ -1259,11 +1259,13 @@ void myPosWidget::processWeixinBeatAck_v1()
     if(true == judgeUp)
     {
         sendUpdataInfo(0);
+        judgeFtpWork = false;
     }
 
     if(true == judgeUpStm)
     {
         sendUpdataInfo(1);
+        judgeFtpWork = false;
     }
 }
 

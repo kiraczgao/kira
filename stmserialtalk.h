@@ -21,7 +21,7 @@
 const char head_f = 0x55;
 const char head_s = 0x7a;
 const int headlen = 6;
-const int MAX_STM_UPDATE_TIME = 1000 * 60 * 5;  //最长单片机升级时间
+const int MAX_STM_UPDATE_TIME = 1000 * 60 * 10;  //最长单片机升级时间
 
 class stmUpdaterThread;
 

@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <sys/reboot.h>
+#include <sys/types.h>
+#include <dirent.h>
 #include <netinet/in.h>
 #include <QFile>
 #include <QByteArray>
@@ -507,39 +509,51 @@ enum appUpdaterError appUpdater::__processUpdate(const posFtpInfo_t& ftpInfo, st
                ftpInfo.version.toLatin1().constData());
         return filetypeError;
     }
-    //设置远程路径到URL
-    url.setPath(strFtpFile);
 
-    //尝试打开本地文件
-    QFile file(strlocalFile);
-    if(!file.open(QIODevice::WriteOnly))
+    QFile file;
+    if(!__checkFileExists(strlocalFile, ftpInfo.crc))
     {
-        printf("[system update]Open local file: %s failed!\n", strlocalFile.toLatin1().constData());
-        return localfileopenError;
+        //文件不存在，执行下载
+        //设置远程路径到URL
+        url.setPath(strFtpFile);
+
+        //尝试打开本地文件
+        file.setFileName(strlocalFile);
+        if(!file.open(QIODevice::WriteOnly))
+        {
+            printf("[system update]Open local file: %s failed!\n", strlocalFile.toLatin1().constData());
+            return localfileopenError;
+        }
+        //赋予最大权限
+        if(!file.setPermissions((QFile::Permissions)0x7777))
+        {
+            printf("[system update]file %s chmod failed!\n", strlocalFile.toLatin1().constData());
+            file.close();
+            return localfilechmodError;
+        }
+
+        //提交下载申请
+        if(!m_pFtpClient->get(url, &file))
+        {
+            printf("[system update]ftp download failed!\n");
+            //删除文件
+            __deleteFile(&file);
+            return downloadError;
+        }
+
+        //本地事件循环，等待下载完成
+        QEventLoop loop;
+        connect(this, SIGNAL(quitloop()), &loop, SLOT(quit()));
+        loop.exec();
+
+        printf("[system update]ftp operation completed!\n");
     }
-    //赋予最大权限
-    if(!file.setPermissions((QFile::Permissions)0x7777))
+    else
     {
-        printf("[system update]file %s chmod failed!\n", strlocalFile.toLatin1().constData());
-        file.close();
-        return localfilechmodError;
+        //文件已存在
+        m_bResult = true;
     }
 
-    //提交下载申请
-    if(!m_pFtpClient->get(url, &file))
-    {
-        printf("[system update]ftp download failed!\n");
-        //删除文件
-        __deleteFile(&file);
-        return downloadError;
-    }
-
-    //本地事件循环，等待下载完成
-    QEventLoop loop;
-    connect(this, SIGNAL(quitloop()), &loop, SLOT(quit()));
-    loop.exec();
-
-    printf("[system update]ftp operation completed!\n");
     if(m_bResult)
     {
         if(__checkDownFileCRC(&file, ftpInfo.crc))
@@ -582,6 +596,7 @@ enum appUpdaterError appUpdater::__processUpdate(const posFtpInfo_t& ftpInfo, st
     {
         file.close();
     }
+    m_bResult = false;  //重置升级标志
     return ret;
 }
 
@@ -700,6 +715,70 @@ void appUpdater::__deleteFile(QFile *file)
 /** @function
 ********************************************************************************
 <PRE>
+函数名: __checkFileExists
+功能:  检测本地升级文件是否存在
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注:
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
+bool appUpdater::__checkFileExists(const QString &strFile, const QString &strCRC)
+{
+    if(!QFile::exists(strFile))
+    {
+        //文件不存在
+        return false;
+    }
+    QFile file(strFile);
+    if(!file.open(QIODevice::ReadOnly) || !__checkDownFileCRC(&file, strCRC))
+    {
+        //CRC不一致，删除文件
+        __deleteFile(&file);
+        return false;
+    }
+    if(file.isOpen())
+    {
+        file.close();
+    }
+    return true;
+}
+
+/** @function
+********************************************************************************
+<PRE>
+函数名: __checkLocalDir
+功能: 检测本地升级文件存储目录是否存在
+抛出异常: 否
+--------------------------------------------------------------------------------
+备注:
+--------------------------------------------------------------------------------
+</PRE>
+*******************************************************************************/
+
+void appUpdater::__checkLocalDir()
+{
+    const QString strMkdir = "mkdir " + UPDATE_DIR;
+    const QString strChmod = "chmod 777 " + UPDATE_DIR;
+    DIR* dir = opendir(UPDATE_DIR.toLatin1().constData());
+    if(dir == NULL)
+    {
+        //升级文件夹不存在，自动创建
+        printf(strMkdir.toLatin1().constData());
+        system(strMkdir.toLatin1().constData());
+        printf(strChmod.toLatin1().constData());
+        system(strChmod.toLatin1().constData());
+    }
+    else
+    {
+        closedir(dir);
+    }
+}
+
+/** @function
+********************************************************************************
+<PRE>
 函数名: __processMainUpdate
 功能:  处理主程序升级函数
 抛出异常: 否
@@ -736,6 +815,12 @@ void appUpdater::__processMainUpdate()
 
 void appUpdater::__processCardReaderUpdate(stmSerialTalk *pstmSerialTalk)
 {
+    //检测是否已经有升级线程在运行
+    if(pstmSerialTalk->stmUpdater->isRunning())
+    {
+        printf("update cardreader, already running!!!");
+        return;
+    }
     printf("update cardreader, start stmUpdater thread...\n");
     if(!pstmSerialTalk->stmUpdater)
     {
