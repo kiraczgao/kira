@@ -133,7 +133,6 @@ myPosWidget::myPosWidget(QWidget *parent) :
 
     // 初始化GPS串口
     scanPosGpsTalk = new gpsSerialTalk;
-//    scanPosGpsTalk->start();
 
     // 初始化数据库
     scanPosDB = new mySqlite;
@@ -141,7 +140,7 @@ myPosWidget::myPosWidget(QWidget *parent) :
     scanPosDB->setTradeOuttime(tradeOuttime);
     scanPosDB->setDriverSignOuttime(driverSignOuttime);
     scanPosDB->clearAlipayOutAbnormalQR();
-    //scanPosDB->clearAlipayOutTradeInfo();
+//    scanPosDB->clearAlipayOutTradeInfo();
     scanPosDB->clearAlipayOutTradeInfoV2(); // v2 --- 2017.3.10
     scanPosDB->clearDriverSignInfo();
     scanPosDB->initDriverSignInfo(driverID);
@@ -616,7 +615,7 @@ void myPosWidget::InitialConfig()
 
 }
 
-//
+//處理接收到的二維碼數據
 int myPosWidget::processTrade()
 {
     scanTradeInfo tradeInfo;
@@ -2648,11 +2647,12 @@ void myPosWidget::processAlipayTradeAck_v1()
     QString tradeTimeStr = QByteArray::fromRawData((char*)lalipayTradeInfoAck.tradeTime, sizeof(lalipayTradeInfoAck.tradeTime));
     QString tradeRecordStr = QByteArray::fromRawData((char*)lalipayTradeInfoAck.tradeRecord, sizeof(lalipayTradeInfoAck.tradeRecord));
     QString userIDStr = QByteArray::fromRawData((char*)lalipayTradeInfoAck.userID, sizeof(lalipayTradeInfoAck.userID));
-    qDebug("kira --- processAlipayTradeAck_v1:");
+    qDebug("kira --- processAlipayTradeAck_v2:");
     qDebug(qPrintable(tradeTimeStr));
     qDebug(qPrintable(tradeRecordStr));
     qDebug(qPrintable(userIDStr));
     scanPosDB->updataAlipayServerAckV2(userIDStr, tradeTimeStr, tradeRecordStr);
+    //scanPosDB->updataAlipayServerAck(userIDStr, tradeTimeStr, tradeRecordStr);
 }
 
 void myPosWidget::processLongpress()

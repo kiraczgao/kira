@@ -123,6 +123,7 @@ mySqlite::mySqlite(QObject *parent) : QObject(parent)
         this->createSqliteTable(sql, tablename);
 
         // 添加司机签到记录
+#if 1
         sql = "CREATE TABLE DRIVESIGNINFO("  \
                 "ID INTEGER PRIMARY KEY    AUTOINCREMENT," \
                 "POSID                     CHAR(8),"  \
@@ -136,6 +137,21 @@ mySqlite::mySqlite(QObject *parent) : QObject(parent)
                 "LATITUDE                  CHAR(12),"  \
                 "SERVERACK                 CHAR,"   \
                 "DRIVERTYPE                CHAR);" ;
+#endif
+#if 0
+        sql = "CREATE TABLE DRIVESIGNINFO("  \
+                "ID INTEGER PRIMARY KEY    AUTOINCREMENT," \
+                "POSID                     CHAR(8),"  \
+                "DRIVERID                  CHAR(16)," \
+                "SIGNFLAG                  CHAR,    " \
+                "SIGNTIME                  CHAR(14)," \
+                "BUSLINE                   CHAR(8),"  \
+                "BUSID                     CHAR(8),"  \
+                "CITYID                    CHAR(6),"  \
+                "LONGITUDE                 CHAR(12),"  \
+                "LATITUDE                  CHAR(12),"  \
+                "SERVERACK                 CHAR);" ;
+#endif
         tablename = "DRIVESIGNINFO";
         this->createSqliteTable(sql, tablename);
 
@@ -1166,6 +1182,8 @@ bool mySqlite::processDriverSign(driveSignNetInfo_t &signNetInfo)
 
     QString mySql= QString("select DRIVERID, SIGNFLAG, DRIVERTYPE from DRIVESIGNINFO where SIGNTIME>='%1';")
                     .arg(sDateTime);
+//    QString mySql= QString("select DRIVERID, SIGNFLAG from DRIVESIGNINFO where SIGNTIME>='%1';")
+//                    .arg(sDateTime);
     qDebug(qPrintable(mySql));
     myQuery.exec(mySql);
     QString ldriverID;
@@ -1262,6 +1280,9 @@ bool mySqlite::insertDriverSignInfo(driveSignNetInfo_t signNetInfo)
     QString latitudeStr = QByteArray::fromRawData((char*)signNetInfo.latitude, sizeof(signNetInfo.latitude));
 
     QSqlQuery myQuery(myDb);
+//    myQuery.prepare("INSERT INTO DRIVESIGNINFO (POSID,DRIVERID,SIGNFLAG,SIGNTIME,BUSLINE,BUSID,CITYID,LONGITUDE,LATITUDE,SERVERACK)"
+//                    "VALUES (:POSID, :DRIVERID, :SIGNFLAG, :SIGNTIME, :BUSLINE, :BUSID, :CITYID, :LONGITUDE, :LATITUDE, :SERVERACK);");
+
     myQuery.prepare("INSERT INTO DRIVESIGNINFO (POSID,DRIVERID,SIGNFLAG,SIGNTIME,BUSLINE,BUSID,CITYID,LONGITUDE,LATITUDE,SERVERACK,DRIVERTYPE)"
                     "VALUES (:POSID, :DRIVERID, :SIGNFLAG, :SIGNTIME, :BUSLINE, :BUSID, :CITYID, :LONGITUDE, :LATITUDE, :SERVERACK, :DRIVERTYPE);");
 #if 1
