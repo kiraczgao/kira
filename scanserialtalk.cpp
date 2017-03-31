@@ -259,6 +259,7 @@ void scanSerialTalk::onTimerOut()
             emit recvWeixinScanInfo();
         }
         else
+#endif
         {
 #if 1
             memcpy(alipayScanInfo.scanData, scanbuf, recvLen-2);

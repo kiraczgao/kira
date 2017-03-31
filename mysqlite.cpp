@@ -134,7 +134,8 @@ mySqlite::mySqlite(QObject *parent) : QObject(parent)
                 "CITYID                    CHAR(6),"  \
                 "LONGITUDE                 CHAR(12),"  \
                 "LATITUDE                  CHAR(12),"  \
-                "SERVERACK                 CHAR);" ;
+                "SERVERACK                 CHAR,"   \
+                "DRIVERTYPE                CHAR);" ;
         tablename = "DRIVESIGNINFO";
         this->createSqliteTable(sql, tablename);
 
@@ -1163,7 +1164,7 @@ bool mySqlite::processDriverSign(driveSignNetInfo_t &signNetInfo)
     QString sDateTime = DateTime.toString("yyyyMMddhhmmss");
     qDebug(qPrintable(sDateTime));
 
-    QString mySql= QString("select DRIVERID, SIGNFLAG from DRIVESIGNINFO where SIGNTIME>='%1';")
+    QString mySql= QString("select DRIVERID, SIGNFLAG, DRIVERTYPE from DRIVESIGNINFO where SIGNTIME>='%1';")
                     .arg(sDateTime);
     qDebug(qPrintable(mySql));
     myQuery.exec(mySql);
@@ -1171,16 +1172,38 @@ bool mySqlite::processDriverSign(driveSignNetInfo_t &signNetInfo)
     int lsignflag;
     bool ret;
     bool selectRet = false;
+    int iCardSign = 0;
     while(myQuery.next())
     {
         ldriverID = myQuery.value(0).toString();
         lsignflag = myQuery.value(1).toInt();
+        iCardSign = myQuery.value(2).toInt();
         selectRet = true;
     }
     myQuery.exec(QObject::tr("drop DRIVESIGNINFO"));
     if(selectRet)
     {
         QString driveIDIDStr = QByteArray::fromRawData((char*)signNetInfo.driveID, sizeof(signNetInfo.driveID));
+        if(iCardSign != 0)//prev is card sign
+        {
+            if((ldriverID == driveIDIDStr) || (unsigned char)signNetInfo.driverType==0x12)
+            {
+                if('0' == lsignflag)
+                {
+                    signNetInfo.signFlag = '1';
+                }
+                else
+                {
+                    signNetInfo.signFlag = '0';
+                }
+                ret = insertDriverSignInfo(signNetInfo);
+                if(false == ret)
+                    return false;
+                return true;
+            }
+            printf("qwy --- driver sign is fail (driverid is diff and is not admin)");
+            return false;
+        }
         if(ldriverID == driveIDIDStr)
         {
             qDebug("kira --- lsignflag: %d", lsignflag);
@@ -1239,8 +1262,8 @@ bool mySqlite::insertDriverSignInfo(driveSignNetInfo_t signNetInfo)
     QString latitudeStr = QByteArray::fromRawData((char*)signNetInfo.latitude, sizeof(signNetInfo.latitude));
 
     QSqlQuery myQuery(myDb);
-    myQuery.prepare("INSERT INTO DRIVESIGNINFO (POSID,DRIVERID,SIGNFLAG,SIGNTIME,BUSLINE,BUSID,CITYID,LONGITUDE,LATITUDE,SERVERACK)"
-                    "VALUES (:POSID, :DRIVERID, :SIGNFLAG, :SIGNTIME, :BUSLINE, :BUSID, :CITYID, :LONGITUDE, :LATITUDE, :SERVERACK);");
+    myQuery.prepare("INSERT INTO DRIVESIGNINFO (POSID,DRIVERID,SIGNFLAG,SIGNTIME,BUSLINE,BUSID,CITYID,LONGITUDE,LATITUDE,SERVERACK,DRIVERTYPE)"
+                    "VALUES (:POSID, :DRIVERID, :SIGNFLAG, :SIGNTIME, :BUSLINE, :BUSID, :CITYID, :LONGITUDE, :LATITUDE, :SERVERACK, :DRIVERTYPE);");
 #if 1
     myQuery.bindValue(":POSID", posIDStr);
     myQuery.bindValue(":DRIVERID", driveIDStr);
@@ -1252,6 +1275,7 @@ bool mySqlite::insertDriverSignInfo(driveSignNetInfo_t signNetInfo)
     myQuery.bindValue(":LONGITUDE", longitudeStr);
     myQuery.bindValue(":LATITUDE", latitudeStr);
     myQuery.bindValue(":SERVERACK", 0);
+    myQuery.bindValue(":DRIVERTYPE",signNetInfo.driverType);
 #endif
     if(!myQuery.exec())
     {
@@ -1307,6 +1331,7 @@ bool mySqlite::scanDriverSignInfo(driveSignNetInfo_t &signNetInfo)
         memcpy(signNetInfo.cityID, myQuery.value(7).toByteArray().data(), myQuery.value(7).toByteArray().length());
         memcpy(signNetInfo.longitude, myQuery.value(8).toByteArray().data(), myQuery.value(8).toByteArray().length());
         memcpy(signNetInfo.latitude, myQuery.value(9).toByteArray().data(), myQuery.value(9).toByteArray().length());
+        signNetInfo.driverType = (char)myQuery.value(10).toByteArray().toInt();
 #endif
         selectRet = true;
         break;

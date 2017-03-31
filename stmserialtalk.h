@@ -42,6 +42,8 @@ signals:
     void recvCardTradeInfoA2();
     void recvTermMkInfoA3();
     void recvPscamAck(char);    // v2 --- 2017.3.15
+    void setPosParam_v2(posParam_t);
+    void driverSign_v2(QString,unsigned char);
 
 public:
     void stmVoiceCmd(char type);
@@ -106,6 +108,10 @@ public:
 private:
     bool m_stopFlag;
     QMutex threadMutex;
+
+public:
+    void BCD2ASCII(unsigned char* asc,const unsigned char* bcd,int len);
+    void ASCII2BCD(unsigned char *bcd, const unsigned char *asc, int len);
 
 //单片机升级功能部分
 public:

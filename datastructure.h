@@ -350,6 +350,7 @@ typedef struct driveSignNetInfo_s
     char cityID[6];             //POS城市代码 ascii
     char longitude[8];			//经度信息-预留
     char latitude[8]; 			//纬度信息-预留
+    char driverType;            //0x11:司机A卡 0x12:管理员卡 0x13司机B卡 0x91:调度总卡 --- not send field
 }driveSignNetInfo_t;
 
 typedef struct driveSignNetAck_s

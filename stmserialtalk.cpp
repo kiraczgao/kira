@@ -121,6 +121,51 @@ seterr:
 openerr:
     return false;
 }
+static unsigned char bcd2ascii[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+static unsigned char ascii2bcd1[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+static unsigned char ascii2bcd2[6]  = {0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F};
+void stmSerialTalk::BCD2ASCII(unsigned char* asc,const unsigned char* bcd,int len)
+{
+    unsigned char c = 0;
+    int i;
+    for(i = 0; i < len; i++) {
+        //first BCD
+        c = *bcd >> 4;
+        *asc++ = bcd2ascii[c];
+        //second
+        c = *bcd & 0x0f;
+        *asc++ = bcd2ascii[c];
+        bcd++;
+    }
+}
+void stmSerialTalk::ASCII2BCD(unsigned char *bcd, const unsigned char *asc, int len)
+{
+    unsigned char c = 0;
+    int index = 0;
+    int i = 0;
+    len >>= 1;
+    for(; i < len; i++) {
+        //first BCD
+        if(*asc >= 'A' && *asc <= 'F') {
+            index = *asc - 'A';
+            c  = ascii2bcd2[index] << 4;
+        } else if(*asc >= '0' && *asc <= '9') {
+            index = *asc - '0';
+            c  = ascii2bcd1[index] << 4;
+        }
+        asc++;
+        //second BCD
+        if(*asc >= 'A' && *asc <= 'F') {
+            index = *asc - 'A';
+            c  |= ascii2bcd2[index];
+        } else if(*asc >= '0' && *asc <= '9') {
+            index = *asc - '0';
+            c  |= ascii2bcd1[index];
+        }
+        asc++;
+        *bcd++ = c;
+    }
+}
 
 void stmSerialTalk::readData()
 {
@@ -182,13 +227,39 @@ void stmSerialTalk::readData()
                     emit recvPscamAck(stmbuf[6]);
                     break;
                 case 0xBF:
-                {
                     printf("qwy---BF\n");
                     msleep(10);
                    // char cdata = 0x00;
                     stmSendData(0xBF,(char*)&stmbuf[6],datalen);
                     printf("qwy---send BF\n");
-                }
+                    break;
+                case 0xC1:
+                    {
+                        posParam_t tag;
+                        memset(&tag,0,sizeof(posParam_t));
+                        //线路号
+                        BCD2ASCII((unsigned char*)tag.buslineID,(unsigned char*)&stmbuf[9],4);
+                        //车辆编号
+                        BCD2ASCII((unsigned char*)tag.busID,(unsigned char*)&stmbuf[13],3);
+                        //票价
+                        memcpy(tag.tickets,&stmbuf[16],2);
+                        emit setPosParam_v2(tag);
+                        //回应
+                        char cData = 0x01;
+                        stmSendData(0xC1,&cData,1);
+                    }
+                    break;
+                case 0xC2:
+                    {
+                        //车辆编号(3 BCD)
+                        //卡类型(1 BCD)
+                        unsigned char cardType = (unsigned char)stmbuf[9];
+                        //操作员卡号(4 BCD)
+                        char cDriver[9] = {0};
+                        BCD2ASCII((unsigned char*)cDriver,(unsigned char*)&stmbuf[10],4);
+                        QString strDriverId = cDriver;
+                        emit driverSign_v2(strDriverId,cardType);
+                    }
                     break;
             }
         }
@@ -358,6 +429,26 @@ void stmSerialTalk::stmVoiceCmd(char type)
             break;
         case 25:
             stmVoiceDriverSign(0x01);
+            break;
+        case 46:
+        case 58:
+        case 59:
+        {
+            char check = 0;
+            char voice[20];
+            int len = 1;
+
+            voice[0] = 0x55;
+            voice[1] = 0x7a;
+            voice[2] = 0x01;
+            memcpy(&voice[3], &len, 2);
+            voice[5] = 0x00;
+            voice[6] = type;
+            for(int i=0; i<6+len; i++)
+                check ^= voice[i];
+            voice[6+len] = check;
+            writeData(voice, len+7);
+        }
             break;
         default:
             qDebug("kira --- stm can't find type");

@@ -107,10 +107,12 @@ public slots:
 
     // drive sign
     void processDriveSign();
+    void processDriveSign_v2(QString strDriver, unsigned char cardtype);
     void processDriverSignAck_v1();
 
     // pos param
     void processPosParamSet();
+    void processPosParamSet_v2(posParam_t posParam);
 
     // ftp info
     void processPosFtpInfo();
@@ -161,6 +163,7 @@ public:
     QString keyBatch;
     QString cityID;
     QString driverID;
+    unsigned char driverCardType;//0x11:司机A卡 0x12:管理员卡 0x13司机B卡 0x91:调度总卡
     QString LVersion;   // kira added - 2017.3.7
     QString SVersion;
     QString LTempVersion;   // kira added - 2017.3.14
@@ -232,7 +235,8 @@ public:
 public:
     alipayTradeInfoV2_t vCityCardInfo;
     QString cityCardQR;
-
+    //當前是否處於簽到狀態
+    bool m_bDriverSigned;
 };
 
 #endif // MYPOSWIDGET_H

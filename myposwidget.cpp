@@ -20,6 +20,7 @@ myPosWidget::myPosWidget(QWidget *parent) :
     ui->setupUi(this);
     //自定义数据结构
     qRegisterMetaType<unionPayAck_t> ("unionPayAck_t");
+    qRegisterMetaType<posParam_t> ("posParam_t");
 
     isShowPosWidget = true;
     // 初始化参数
@@ -60,6 +61,10 @@ myPosWidget::myPosWidget(QWidget *parent) :
     connect(scanPosStmTalk, SIGNAL(recvRightpress()), this, SLOT(processRightpress()));
     connect(scanPosStmTalk, SIGNAL(recvCardTradeInfoA2()), this, SLOT(processUnionPayTradeInfo()));
     connect(scanPosStmTalk, SIGNAL(recvTermMkInfoA3()), this, SLOT(processUnionPayTermMkInfo()));
+    //通过运参卡设置线路、车辆编号和票价
+    connect(scanPosStmTalk, SIGNAL(setPosParam_v2(posParam_t)), this, SLOT(processPosParamSet_v2(posParam_t)));
+    //司机卡签到
+    connect(scanPosStmTalk, SIGNAL(driverSign_v2(QString,unsigned char)), this, SLOT(processDriveSign_v2(QString, unsigned char)));
     // pscam
     connect(scanPosStmTalk, SIGNAL(recvPscamAck(char)), this, SLOT(processPscamAck(char)));
     scanPosStmTalk->setTickets(tickets);
@@ -142,6 +147,10 @@ myPosWidget::myPosWidget(QWidget *parent) :
     scanPosDB->initDriverSignInfo(driverID);
     scanPosTalk->setdriverID(driverID);
     scanPosDB->clearUnionpayInfo();
+    //初始化是否处于签到状态
+    m_bDriverSigned = false;
+    if(driverID.length()>1)
+        m_bDriverSigned = true;
 
     // 初始化管理界面（签到、黑名单清除、设置POSID BUSID BUSLINE TICKETS）
     scanPosSignal = new signalWidget();
@@ -169,7 +178,10 @@ myPosWidget::myPosWidget(QWidget *parent) :
 
     ui->myStackedWidget->addWidget(scanPosTalk);
     ui->myStackedWidget->addWidget(scanPosTradeTalk);
-    ui->myStackedWidget->setCurrentWidget(scanPosTalk);
+    if(!m_bDriverSigned)
+        ui->myStackedWidget->setCurrentWidget(scanPosSignal);
+    else
+        ui->myStackedWidget->setCurrentWidget(scanPosTalk);
 
     tradeRecord = 0;
     onlineTradeRecord = 0;
@@ -456,8 +468,8 @@ void myPosWidget::signScanTimerOut()
             return;
         }
 
-        // 组包
-        int datalen = sizeof(driveSignNetInfo_t);
+        // 组包---not send drivertype
+        int datalen = sizeof(driveSignNetInfo_t)-1;
         unsigned char signData[1024] = {0};
         memset(signData, 0, sizeof(signData));
         signData[0] = 0x55;
@@ -495,7 +507,8 @@ void myPosWidget::showTradeDialog()
         scanPosStmTalk->setBalance(balance);
         scanPosStmTalk->setDebit(debit);
         //scanPosStmTalk->stmVoiceCmd(12);
-        scanPosStmTalk->stmVoiceCmd(26);
+        //scanPosStmTalk->stmVoiceCmd(26);
+        scanPosStmTalk->stmVoiceCmd(46);//--
 
         scanPosTradeTalk->setBalance(balance);
         scanPosTradeTalk->setDebit(debit);
@@ -1223,7 +1236,7 @@ void myPosWidget::processWeixinBeatAck_v1()
     qDebug(qPrintable(l_LVersion));
     qDebug("kira--- SVersion: ");
     qDebug(qPrintable(l_SVersion));
-
+#if 1
     if(false == judgeFtpWork)
     {
         configSet.readSetInfo(configFile, workgroup, "LVersion", LVersion); // kira added - 2017.3.8
@@ -1267,6 +1280,7 @@ void myPosWidget::processWeixinBeatAck_v1()
         sendUpdataInfo(1);
         judgeFtpWork = false;
     }
+#endif
 }
 
 // v2 --- 2017.3.14
@@ -1582,6 +1596,10 @@ void myPosWidget::askAlipayBlacklist()
 
 int myPosWidget::processAlipayScanInfo()
 {
+    if(!m_bDriverSigned){
+        printf("qwy --- driver is not sign\n");
+        return -1;
+    }
     int ret = 0, key_id = 0;
     char master_pub_key[128] = {0};
     char pos_param[256] = {0};
@@ -1917,6 +1935,10 @@ int myPosWidget::processAlipayScanInfo()
                     {\"key_id\":31,\"public_key\":\"02EA31FB09DD181E6645D5E1827CDE07FC7D23BCD9DFB1C3DECDF6534F0B4713B9\"}]"
 int myPosWidget::processAlipayScanInfoV2()
 {
+    if(!m_bDriverSigned){
+        printf("qwy --- driver is not sign\n");
+        return -1;
+    }
     int ret = 0;
     char pos_param[256] = {0};
 
@@ -2807,6 +2829,21 @@ void myPosWidget::processDriveSign()
     }
 }
 
+void myPosWidget::processDriveSign_v2(QString strDriver, unsigned char cardtype)
+{
+    driverID = strDriver;
+    driverCardType = cardtype;
+    //可添加防误刷机制
+    bool isRepeat = scanPosDB->judgeDriverSignRepeat(driverID);
+    if(isRepeat)
+    {
+        qDebug("kira --- driver scan card in 10s; please wait 10s...");
+    }
+    else
+        dealDriveSign();
+    driverCardType = 0x00;
+}
+
 void myPosWidget::dealDriveSign()
 {
     driveSignNetInfo_t lsignNetInfo;
@@ -2835,18 +2872,23 @@ void myPosWidget::dealDriveSign()
     qDebug(qPrintable(latitudeStr));
     memcpy(lsignNetInfo.longitude, longitudeStr.toLatin1().data(), sizeof(lsignNetInfo.longitude));
     memcpy(lsignNetInfo.latitude, latitudeStr.toLatin1().data(), sizeof(lsignNetInfo.latitude));
+    lsignNetInfo.driverType = driverCardType;
 
     bool ret = scanPosDB->processDriverSign(lsignNetInfo);
 
     if(ret)
     {
-        scanPosStmTalk->stmVoiceCmd(25);
+  //      scanPosStmTalk->stmVoiceCmd(25);
         qDebug("kira --- signFlag: %c", lsignNetInfo.signFlag);
         if('1' == lsignNetInfo.signFlag)
         {
             qDebug("kira --- driverID: ");
             qDebug(qPrintable(driverID));
             scanPosTalk->setdriverID(driverID);
+            //設置簽到狀態
+            scanPosStmTalk->stmVoiceCmd(58);
+            m_bDriverSigned = true;
+            ui->myStackedWidget->setCurrentWidget(scanPosTalk);
         }
         else
         {
@@ -2855,9 +2897,13 @@ void myPosWidget::dealDriveSign()
             qDebug(qPrintable(driverID));
             // 是否需要签退后数码管“清零”
             scanPosStmTalk->stmClearLEDDisp();
+            //設置簽到狀態
+            scanPosStmTalk->stmVoiceCmd(59);
+            m_bDriverSigned = false;
+            ui->myStackedWidget->setCurrentWidget(scanPosSignal);
         }
-        // 组包
-        int datalen = sizeof(driveSignNetInfo_t);
+        // 组包---not send drivertype
+        int datalen = sizeof(driveSignNetInfo_t)-1;
         unsigned char signData[1024] = {0};
         memset(signData, 0, sizeof(signData));
         signData[0] = 0x55;
@@ -2898,6 +2944,10 @@ void myPosWidget::processDriverSignAck_v1()
 
 void myPosWidget::processUnionPayTradeInfo()
 {
+    if(!m_bDriverSigned){
+        printf("qwy --- driver is not sign\n");
+        return;
+    }
     cardreceiveA2 lunionPayProcA2;
     scanPosStmTalk->getCardTradeInfo(&lunionPayProcA2);
 
@@ -2931,9 +2981,9 @@ void myPosWidget::processUnionPayTradeInfo()
     tradeData[0] = 0x55;
     tradeData[1] = 0x7a;
     //unionpay
-//    TimerTesting tt;
+    TimerTesting tt;
     int ret = scanPosUnionPay->processA2Talk(&tag,lunionPayProcA2, (int)(tickets.toDouble()*100));
-//    tt.PrintlnTimeUse();
+    tt.PrintlnTimeUse();
     if(0 == ret)  /// kira - test
     {
         int amount = (int)(tickets.toDouble() * 100.0);
@@ -3058,6 +3108,36 @@ void myPosWidget::processPosParamSet()
     configSet.writeSetInfo(configFile, workgroup, "cityID", cityIDstr);
 
     ackPosParamSet();
+}
+
+void myPosWidget::processPosParamSet_v2(posParam_t posParam)
+{
+    QString posIDstr = QByteArray::fromRawData((char*)posParam.posID, sizeof(posParam.posID));
+    QString buslineIDstr = QByteArray::fromRawData((char*)posParam.buslineID, sizeof(posParam.buslineID));
+    QString busIDstr = QByteArray::fromRawData((char*)posParam.busID, sizeof(posParam.busID));
+    QString cityIDstr = QByteArray::fromRawData((char*)posParam.cityID, sizeof(posParam.cityID));
+    int itickets = 0;
+    memcpy(&itickets, posParam.tickets, 2);
+    qDebug("qwy --- pos param set tickets = %d", itickets);
+    QString ticketsstr = QString::number(itickets, 10);
+
+    if(!busIDstr.isEmpty()){
+        configSet.writeSetInfo(configFile, workgroup, "busID", busIDstr);
+        busID = busIDstr;
+    }
+    if(!buslineIDstr.isEmpty()){
+        configSet.writeSetInfo(configFile, workgroup, "buslineID", buslineIDstr);
+        buslineID = buslineIDstr;
+    }
+    //configSet.writeSetInfo(configFile, workgroup, "posID", posIDstr);
+    if(!ticketsstr.isEmpty()){
+        configSet.writeSetInfo(configFile, workgroup, "tickets", ticketsstr);
+        tickets = ticketsstr;
+    }
+    if(!cityIDstr.isEmpty()){
+        configSet.writeSetInfo(configFile, workgroup, "cityID", cityIDstr);
+        cityID = cityIDstr;
+    }
 }
 
 void myPosWidget::ackPosParamSet()
