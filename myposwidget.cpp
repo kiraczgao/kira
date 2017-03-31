@@ -67,6 +67,8 @@ myPosWidget::myPosWidget(QWidget *parent) :
     connect(scanPosStmTalk, SIGNAL(driverSign_v2(QString,unsigned char)), this, SLOT(processDriveSign_v2(QString, unsigned char)));
     // pscam
     connect(scanPosStmTalk, SIGNAL(recvPscamAck(char)), this, SLOT(processPscamAck(char)));
+    //显示设备参数
+    connect(scanPosStmTalk, SIGNAL(recvShowPosParam()), this, SLOT(processShowPosParam()));
     scanPosStmTalk->setTickets(tickets);
     scanPosStmTalk->start();
 
@@ -2677,6 +2679,11 @@ void myPosWidget::processLongpress()
     }
     ui->myStackedWidget->setCurrentWidget(scanPosTalk);
     myui = signalUI;
+}
+
+void myPosWidget::processShowPosParam()
+{
+    //show pos param
 }
 
 void myPosWidget::processShortpress()

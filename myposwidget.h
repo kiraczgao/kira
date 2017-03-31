@@ -104,6 +104,7 @@ public slots:
     void processCheckConfirmBusID();
     void processCheckConfirmPosID();
     void processCheckConfirmBusline();
+    void processShowPosParam();//显示设备参数
 
     // drive sign
     void processDriveSign();

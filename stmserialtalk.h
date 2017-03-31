@@ -44,6 +44,7 @@ signals:
     void recvPscamAck(char);    // v2 --- 2017.3.15
     void setPosParam_v2(posParam_t);
     void driverSign_v2(QString,unsigned char);
+    void recvShowPosParam();
 
 public:
     void stmVoiceCmd(char type);
