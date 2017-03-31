@@ -381,8 +381,14 @@ void stmSerialTalk::processPress(char *pdata, int datalen)
         case 0x73:
             emit recvRightpress();
             break;
-        case 0x80://show pos param
+        case 0x81://show pos param
             emit recvShowPosParam();
+            break;
+        case 0x82:
+            break;
+        case 0x83:
+            break;
+        case 0x84:
             break;
         default:
             qDebug("kira --- stm32 key wrong value...");
