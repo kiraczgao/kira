@@ -49,7 +49,8 @@ HEADERS += blackclearwidget.h \
            include/pos_crypto.h \
     appUpdater.h \
     crc32.h \
-    timertesting.h
+    timertesting.h \
+    posparamwidget.h
 FORMS += blackclearwidget.ui \
          busidwidget.ui \
          buslinewidget.ui \
@@ -57,7 +58,8 @@ FORMS += blackclearwidget.ui \
          posidwidget.ui \
          poswidget.ui \
          signalwidget.ui \
-         tradedialog.ui
+         tradedialog.ui \
+    posparamwidget.ui
 SOURCES += blackclearwidget.cpp \
            busidwidget.cpp \
            buslinewidget.cpp \
@@ -83,6 +85,7 @@ SOURCES += blackclearwidget.cpp \
     boost_source.cpp \
     appUpdater.cpp \
     crc32.cpp \
-    timertesting.cpp
+    timertesting.cpp \
+    posparamwidget.cpp
 
 RESOURCES += disppic.qrc

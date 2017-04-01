@@ -359,7 +359,7 @@ again:
         else
         {
             rebootnet++;
-            if(rebootnet>3)
+            if(rebootnet > 3)
             {
                 unsigned char cmd_s[100] = {0};
                 sprintf((char*)cmd_s, "/opt/kira/netmodul.pri");

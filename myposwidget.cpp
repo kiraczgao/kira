@@ -143,7 +143,7 @@ myPosWidget::myPosWidget(QWidget *parent) :
     scanPosDB->setTradeOuttime(tradeOuttime);
     scanPosDB->setDriverSignOuttime(driverSignOuttime);
     scanPosDB->clearAlipayOutAbnormalQR();
-//    scanPosDB->clearAlipayOutTradeInfo();
+    //scanPosDB->clearAlipayOutTradeInfo();
     scanPosDB->clearAlipayOutTradeInfoV2(); // v2 --- 2017.3.10
     scanPosDB->clearDriverSignInfo();
     scanPosDB->initDriverSignInfo(driverID);

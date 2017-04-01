@@ -22,7 +22,7 @@
    <property name="geometry">
     <rect>
      <x>50</x>
-     <y>20</y>
+     <y>40</y>
      <width>380</width>
      <height>200</height>
     </rect>
@@ -123,26 +123,6 @@ color: rgb(255, 255, 255);</string>
    <zorder>signalDateEdit</zorder>
    <zorder>frame_2</zorder>
   </widget>
-  <widget class="QLabel" name="label">
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>220</y>
-     <width>400</width>
-     <height>30</height>
-    </rect>
-   </property>
-   <property name="styleSheet">
-    <string notr="true">color: rgb(255, 255, 255);
-font: 75 12pt &quot;微软雅黑&quot;;</string>
-   </property>
-   <property name="text">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;请持卡，对准屏幕中心，听到“叮咚”一声，完成签到！&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignCenter</set>
-   </property>
-  </widget>
   <widget class="QFrame" name="frame_3">
    <property name="geometry">
     <rect>
@@ -154,7 +134,7 @@ font: 75 12pt &quot;微软雅黑&quot;;</string>
    </property>
    <property name="styleSheet">
     <string notr="true">#frame_3 {
-border-image: url(:/images/background.png);
+	border-image: url(:/images/parambk.png);
 }</string>
    </property>
    <property name="frameShape">
@@ -163,14 +143,9 @@ border-image: url(:/images/background.png);
    <property name="frameShadow">
     <enum>QFrame::Raised</enum>
    </property>
-   <zorder>signalTimeEdit</zorder>
-   <zorder>signalDateEdit</zorder>
   </widget>
   <zorder>frame_3</zorder>
   <zorder>frame</zorder>
-  <zorder>label</zorder>
-  <zorder>signalTimeEdit</zorder>
-  <zorder>signalDateEdit</zorder>
  </widget>
  <resources/>
  <connections/>
