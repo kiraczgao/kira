@@ -2703,7 +2703,7 @@ void myPosWidget::processShowPosParam()
     //显示pos参数
     scanPosParam->setPosID(posID);
     scanPosParam->setBusID(busID);
-    scanPosParam->setLineID(posID);
+    scanPosParam->setLineID(buslineID);
     scanPosParam->setTicket(tickets);
     ui->myStackedWidget->setCurrentWidget(scanPosParam);
     //定时
@@ -3191,7 +3191,7 @@ void myPosWidget::processPosParamQRCode(QString line,QString bus,QString ticket)
     //显示pos参数
     scanPosParam->setPosID(posID);
     scanPosParam->setBusID(busID);
-    scanPosParam->setLineID(posID);
+    scanPosParam->setLineID(buslineID);
     scanPosParam->setTicket(tickets);
     ui->myStackedWidget->setCurrentWidget(scanPosParam);
 }
