@@ -26,6 +26,7 @@
 #include "serialdata.h"
 #include "datastructure.h"
 #include "unionpaynet.h"
+#include "detect4g.h"
 
 class QTimer;
 

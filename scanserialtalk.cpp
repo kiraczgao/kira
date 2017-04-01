@@ -5,6 +5,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include "vector"
 
 #if 1
 #include <openssl/rsa.h>
@@ -30,6 +31,13 @@ scanSerialTalk::scanSerialTalk()
     recvLen = 0;
     m_stopFlag = false;
     memset(scanbuf, 0, sizeof(scanbuf));
+
+    QString posparamsettingend;
+    m_config.readSetInfo("/opt/kira/configure/setting.ini", "other", "PosParamSettingEnd", posparamsettingend);
+    if(posparamsettingend.compare("ok")==0)
+        m_bPosParamSettingEnd = true;
+    else
+        m_bPosParamSettingEnd = false;
 
     ledGfd = open("/sys/class/gpio/gpio108/value", O_RDWR);
     if(ledGfd < 0)
@@ -247,6 +255,45 @@ void scanSerialTalk::onTimerOut()
         memcpy(&driveSignRecordInfo.signInfo, scanbuf, recvLen-2);
         driveSignRecordInfo.signInfoLen = recvLen - 2;
         emit recvDriveSignInfo();
+    }
+    else if(memcmp(tempdata,"golong://", strlen("golong://")) == 0)
+    {
+        if(m_bPosParamSettingEnd){
+            memset(scanbuf, 0, sizeof(scanbuf));
+            recvLen = 0;
+            qDebug("qwy --- pos param setting is end...");
+            return;
+        }
+        qDebug("qwy --- first set pos param...");
+        scanbuf[recvLen-2] = '\0';
+        std::string _RecString = &scanbuf[9];
+        if(_RecString.compare("kiraisok") == 0){
+            m_bPosParamSettingEnd = true;
+            m_config.writeSetInfo("/opt/kira/configure/setting.ini", "other", "PosParamSettingEnd", "ok");
+            emit recvPosParamQRCodeEnd();
+        }
+        else
+        {
+            std::vector<std::string> vec;
+            boost::split(vec,_RecString,boost::is_any_of(";"),boost::token_compress_on);
+            if(vec.size() >= 3)
+            {
+                //lineid busid ticket
+                vec[0].erase(remove_if(vec[0].begin(), vec[0].end(), isspace), vec[0].end());
+                if(vec[0].length()>8)
+                    vec[0] = vec[0].substr(0,8);
+                QString lineid = vec[0].c_str();
+
+                vec[1].erase(remove_if(vec[1].begin(), vec[1].end(), isspace), vec[1].end());
+                if(vec[1].length()>8)
+                    vec[1] = vec[1].substr(0,8);
+                QString busid = vec[1].c_str();
+
+                vec[2].erase(remove_if(vec[2].begin(), vec[2].end(), isspace), vec[2].end());
+                QString ticket = vec[2].c_str();
+                emit recvPosParamQRCode(lineid,busid,ticket);
+            }
+        }
     }
     else
     {
