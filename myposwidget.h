@@ -118,6 +118,8 @@ public slots:
     // pos param
     void processPosParamSet();
     void processPosParamSet_v2(posParam_t posParam);
+    void processPosParamQRCode(QString line,QString bus,QString ticket);
+    void processPosParamQRCodeEnd();
 
     // ftp info
     void processPosFtpInfo();

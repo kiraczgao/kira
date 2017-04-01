@@ -13,6 +13,10 @@
 #include <QThread>
 #include <QMutex>
 #include <QMutexLocker>
+#ifndef Q_MOC_RUN
+#include "../boost_1_58_0/boost_include.h"
+#endif
+#include "setconfig.h"
 
 class QTimer;
 
@@ -38,6 +42,9 @@ signals:
     void recvDriveSignInfo();
     void recvAlipayScanInfo();
     void recvWeixinScanInfo();
+    //初始化设置设备线路、车辆号和票价
+    void recvPosParamQRCode(QString,QString,QString);
+    void recvPosParamQRCodeEnd();
 
 public slots:
     void readData();
@@ -78,6 +85,8 @@ public:
     int scanctlfd;
     QTimer *myTimer;
     QThread* myThread;
+    bool m_bPosParamSettingEnd;
+    setConfig m_config;
 };
 
 #endif // SCANSERIALTALK_H

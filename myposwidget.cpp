@@ -47,6 +47,9 @@ myPosWidget::myPosWidget(QWidget *parent) :
     scanPosScanTalk = new scanSerialTalk;
     connect(scanPosScanTalk, SIGNAL(recvScanInfo()), this, SLOT(showTradeDialog()));
     connect(scanPosScanTalk, SIGNAL(recvDriveSignInfo()), this, SLOT(processDriveSign()));
+    // POS param setting first
+    connect(scanPosScanTalk, SIGNAL(recvPosParamQRCode(QString,QString,QString)), this, SLOT(processPosParamQRCode(QString,QString,QString)));
+    connect(scanPosScanTalk, SIGNAL(recvPosParamQRCodeEnd()), this, SLOT(processPosParamQRCodeEnd()));
     scanPosScanTalk->start();
 
     // 微信在线支付
@@ -2916,7 +2919,7 @@ void myPosWidget::dealDriveSign()
             //設置簽到狀態
             scanPosStmTalk->stmVoiceCmd(58);
             m_bDriverSigned = true;
-            ui->myStackedWidget->setCurrentWidget(scanPosTalk);
+            showPosWidget();
         }
         else
         {
@@ -3140,7 +3143,7 @@ void myPosWidget::processPosParamSet()
 
 void myPosWidget::processPosParamSet_v2(posParam_t posParam)
 {
-    QString posIDstr = QByteArray::fromRawData((char*)posParam.posID, sizeof(posParam.posID));
+ //   QString posIDstr = QByteArray::fromRawData((char*)posParam.posID, sizeof(posParam.posID));
     QString buslineIDstr = QByteArray::fromRawData((char*)posParam.buslineID, sizeof(posParam.buslineID));
     QString busIDstr = QByteArray::fromRawData((char*)posParam.busID, sizeof(posParam.busID));
     QString cityIDstr = QByteArray::fromRawData((char*)posParam.cityID, sizeof(posParam.cityID));
@@ -3166,6 +3169,39 @@ void myPosWidget::processPosParamSet_v2(posParam_t posParam)
         configSet.writeSetInfo(configFile, workgroup, "cityID", cityIDstr);
         cityID = cityIDstr;
     }
+    //show pos param
+    processShowPosParam();
+}
+
+void myPosWidget::processPosParamQRCode(QString line,QString bus,QString ticket)
+{
+    if(!line.isEmpty()){
+        configSet.writeSetInfo(configFile, workgroup, "buslineID", line);
+        buslineID = line;
+    }
+    if(!bus.isEmpty()){
+        configSet.writeSetInfo(configFile, workgroup, "busID", bus);
+        busID = bus;
+    }
+    if(!ticket.isEmpty()){
+        configSet.writeSetInfo(configFile, workgroup, "tickets", ticket);
+        tickets = ticket;
+    }
+    //show pos param
+    //显示pos参数
+    scanPosParam->setPosID(posID);
+    scanPosParam->setBusID(busID);
+    scanPosParam->setLineID(posID);
+    scanPosParam->setTicket(tickets);
+    ui->myStackedWidget->setCurrentWidget(scanPosParam);
+}
+
+void myPosWidget::processPosParamQRCodeEnd()
+{
+    if(!m_bDriverSigned)
+        ui->myStackedWidget->setCurrentWidget(scanPosSignal);
+    else
+        showPosWidget();
 }
 
 void myPosWidget::ackPosParamSet()
